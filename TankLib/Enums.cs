@@ -12,7 +12,7 @@ namespace TankLib {
 
         [Flags]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
-        public enum teSHADER_TYPE : ulong {
+        public enum teSHADER_TYPE : uint {
             VERTEX = 1,
             PIXEL = 2,
             GEOMETRY = 4,
@@ -29,12 +29,47 @@ namespace TankLib {
             SINGLE_MODEL = 0x2,
             OCCLUDER = 0x3,
             REFLECTIONPOINT = 0x4,
+            CLUTTER = 0x5,
             LABEL = 0x6,
             TEXT = 0x7,
+            MODEL = 0x8,
+            LIGHT = 0x9,
+            AREA = 0xA,
+            ENTITY = 0xB,
+            SOUND = 0xC,
+            EFFECT = 0xD,
+            FOG = 0xE,
+            INDOORBOX = 0xF,
+            POSTPROCESSING = 0x10,
+            PLANAR_REFLECTION_SURFACE = 0x11
+            // MAP_CHUNK_COLLISION = 0x12
+            // MAP_CHUNK_PATHING 0x13
+            // MAP_CHUNK_SOUNDAREA = 0x14
+
+        }
+
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        public enum teLIGHTTYPE : uint {
+            POINT = 0,
+            FRUSTUM = 1,
+            NONE = 2
+        }
+        
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        [Flags]
+        public enum teSHADER_STATE : byte {
+            DECAL = 2,
+            REFRACTIVE = 0x10,
             
-            LIGHT = 0x9,  // not confirmed
-            
-            ENTITY = 0xB
+            ALL_BLEND_MODES = 0x3F
+        }
+        
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        [Flags]
+        public enum teSHADER_FEATURE_FLAG : uint {
+            REFRACTION_OFFSETS = 9,
+            REFRACTION_TOP = 0xA,
+            REFRACTION_UNDER = 0xB
         }
     }
 }

@@ -2,15 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using DataTool.DataModels;
 using DataTool.FindLogic;
 using DataTool.Flag;
 using DataTool.Helper;
 using DataTool.SaveLogic.Unlock;
-using OWLib;
-using STULib.Types.Generic;
 using TankLib.STU.Types;
-using TankLib.STU.Types.Enums;
 using static DataTool.Helper.IO;
 using static DataTool.Program;
 using static DataTool.Helper.STUHelper;
@@ -36,9 +34,10 @@ namespace DataTool.ToolLogic.Extract {
         public CosmeticType(string name) {
             Name = name;
             Tags = new List<QueryTag> {
-                new QueryTag("rarity", new List<string>{"common", "rare", "legendary"}),
-                new QueryTag("event", new List<string>{"base", "summergames", "halloween", "winter", "lunarnewyear", "uprising", "anniversary"}),
-                new QueryTag("leagueTeam", new List<string>())
+                new QueryTag("rarity", new List<string>{"common", "rare", "epic", "legendary"}),
+                new QueryTag("event", new List<string>{"base", "summergames", "halloween", "winter", "lunarnewyear", "archives", "anniversary"}),
+                new QueryTag("leagueTeam", new List<string>()),
+                new QueryTag("special", new List<string> {"sg2018"})
             };
         }
     }
@@ -68,7 +67,15 @@ namespace DataTool.ToolLogic.Extract {
             ["lucio"] = "lúcio",
             ["torbjorn"] = "torbjörn",
             ["torb"] = "torbjörn",
-            ["dva"] = "d.va"
+            ["toblerone"] = "torbjörn",
+            ["dva"] = "d.va",
+            ["fanservice"] = "d.va",
+            ["starcraft_pro"] = "d.va",
+            ["starcraft_pro_but_not_actually_because_michael_chu_retconned_it"] = "d.va",
+            ["hammond"] = "wrecking ball",
+            ["hamster"] = "wrecking ball",
+            ["baguette"] = "brigitte",
+            ["burrito"] = "brigitte"
         };
 
         public Dictionary<string, string> QueryNameOverrides => HeroMapping;
@@ -88,7 +95,7 @@ namespace DataTool.ToolLogic.Extract {
         public List<STUHero> GetHeroes() {
             var @return = new List<STUHero>();
             foreach (ulong key in TrackedFiles[0x75]) {
-                var hero = GetInstanceNew<STUHero>(key);
+                var hero = GetInstance<STUHero>(key);
                 // if (hero?.Name == null || hero.LootboxUnlocks == null) continue;
 
                 @return.Add(hero);
@@ -132,6 +139,7 @@ namespace DataTool.ToolLogic.Extract {
             Log($"{indent+1}\"Reaper|spray=(event=!halloween)\" \t\t(extract all of Reper's sprays that are not from Halloween)");
             Log($"{indent+1}\"Reaper|skin=(rarity=legendary)\" \t\t(extract all of Reaper's legendary skins)");
             Log($"{indent+1}\"Reaper|spray=!Cute,*\" \t\t(extract all of Reaper's sprays except \"Cute\")");
+            Log($"{indent+1}\"*|skin=(leagueteam=none)\" \t\t(extract skins for every hero ignoring Overwatch League skins)");
             
             // Log("https://www.youtube.com/watch?v=9Deg7VrpHbM");
         }
@@ -141,8 +149,6 @@ namespace DataTool.ToolLogic.Extract {
                 QueryHelp(QueryTypes);
                 return;
             }
-            
-            Log("Initializing...");
 
             Dictionary<string, Dictionary<string, ParsedArg>> parsedTypes = ParseQuery(flags, QueryTypes, QueryNameOverrides);
             if (parsedTypes == null) return;
@@ -172,6 +178,8 @@ namespace DataTool.ToolLogic.Extract {
                 if (progressionUnlocks.LootBoxesUnlocks != null && npc) {
                     continue;
                 }
+                
+                Log($"Processing unlocks for {heroNameActual}");
 
                 {
                     Combo.ComboInfo guiInfo = new Combo.ComboInfo();
@@ -201,8 +209,8 @@ namespace DataTool.ToolLogic.Extract {
                     foreach (var skin in hero.m_skinThemes) {
                         if (!config.ContainsKey("skin") && config["skin"].ShouldDo(GetFileName(skin.m_5E9665E3)))
                             continue;
-                        Skin.Save(flags, Path.Combine(heroPath, Unlock.GetTypeName(typeof(STUUnlock_SkinTheme)), "NPC", 
-                            GetFileName(skin.m_5E9665E3)), skin, hero);
+                        SkinTheme.Save(flags, Path.Combine(heroPath, Unlock.GetTypeName(typeof(STUUnlock_SkinTheme)), 
+                            string.Empty, GetFileName(skin.m_5E9665E3)), skin, hero);
                     }
                     continue;
                 }
@@ -217,10 +225,10 @@ namespace DataTool.ToolLogic.Extract {
                 if (progressionUnlocks.LootBoxesUnlocks != null) {
                     foreach (LootBoxUnlocks lootBoxUnlocks in progressionUnlocks.LootBoxesUnlocks) {
                         if (lootBoxUnlocks.Unlocks == null) continue;
-                        string lootboxName = GetLootBoxName((uint)lootBoxUnlocks.LootBoxType);
+                        string lootboxName = LootBox.GetName(lootBoxUnlocks.LootBoxType);
                         
                         var tags = new Dictionary<string, TagExpectedValue> {
-                            {"event", new TagExpectedValue(lootboxName.Replace(" ", "").ToLowerInvariant())}
+                            {"event", new TagExpectedValue(LootBox.GetBasicName(lootBoxUnlocks.LootBoxType))}
                         };
 
                         SaveUnlocks(flags, lootBoxUnlocks.Unlocks, heroPath, lootboxName, config, tags, voiceSet, hero);
@@ -259,11 +267,22 @@ namespace DataTool.ToolLogic.Extract {
                     eventKey = "League";
                 }
                 tags["rarity"] = new TagExpectedValue(unlock.Rarity.ToString());
+                
+                //if (UnlockData.SummerGames2016.Contains(unlock.GUID)) {
+                //    tags["special"] = new TagExpectedValue("sg2016");
+                //} if (UnlockData.SummerGames2017.Contains(unlock.GUID)) {
+                //    tags["special"] = new TagExpectedValue("sg2017");
+                //} else 
+                if (UnlockData.SummerGames2018.Contains(unlock.GUID)) {
+                    tags["special"] = new TagExpectedValue("sg2018");
+                } else {
+                    tags["special"] = new TagExpectedValue("none");
+                }
             } else {
                 rarity = ""; // for general unlocks
             }
             
-            string thisPath = Path.Combine(path, unlock.Type, eventKey, rarity, GetValidFilename(unlock.GetName()).Replace(".", ""));
+            string thisPath = Path.Combine(path, unlock.Type, eventKey, rarity, GetValidFilename(unlock.GetName()));
             
             if (ShouldDo(unlock, config, tags, typeof(STUUnlock_SprayPaint))) {
                 SprayAndIcon.Save(flags, thisPath, unlock);
@@ -287,7 +306,12 @@ namespace DataTool.ToolLogic.Extract {
             }
             
             if (ShouldDo(unlock, config, tags, typeof(STUUnlock_SkinTheme))) {
-                Skin.Save(flags, thisPath, unlock, hero);
+                SkinTheme.Save(flags, thisPath, unlock, hero);
+            }
+            
+            if (ShouldDo(unlock, config, tags, typeof(STUUnlock_PortraitFrame))) {
+                thisPath = Path.Combine(path, unlock.Type);
+                PortraitFrame.Save(flags, thisPath, unlock);
             }
         }
 
@@ -296,19 +320,9 @@ namespace DataTool.ToolLogic.Extract {
 
             string type = Unlock.GetTypeName(unlockType);
             string typeLower = type.ToLowerInvariant();
-            if (config == null) return true;
-            return unlock.Type == type && config.ContainsKey(typeLower) && config[typeLower].ShouldDo(unlock.GetName(), tags);
-        }
-
-        public static string GetLootBoxName(uint type) {
-            if (ItemEvents.GetInstance().EventsNormal.TryGetValue(type, out string lootboxName)) {
-                return lootboxName;
-            }
-            return $"Unknown{type}";
-        }
-
-        public static string GetLootBoxName(Enum_BABC4175 lootBoxType) {
-            return GetLootBoxName((uint)lootBoxType);
+            if (config == null) return unlock.Type == type;
+            return unlock.Type == type && config.ContainsKey(typeLower) &&
+                   config[typeLower].ShouldDo(unlock.GetName(), tags);
         }
     }
 }

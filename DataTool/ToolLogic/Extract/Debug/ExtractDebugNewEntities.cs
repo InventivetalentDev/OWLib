@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using DataTool.FindLogic;
 using DataTool.Flag;
 using Newtonsoft.Json.Linq;
@@ -42,7 +42,7 @@ namespace DataTool.ToolLogic.Extract.Debug {
             MD5HashComparer comparer = new MD5HashComparer();
             Dictionary<MD5Hash, ushort> addedHashes = new Dictionary<MD5Hash, ushort>(comparer);
             Dictionary<MD5Hash, ulong> hashGUIDs = new Dictionary<MD5Hash, ulong>(comparer);
-            var md5 = MD5.Create();
+            //var md5 = MD5.Create();
             
             // key = content hash, value = type
             foreach (KeyValuePair<ulong,ApplicationPackageManifest.Types.PackageRecord> file in Files) {
@@ -89,10 +89,9 @@ namespace DataTool.ToolLogic.Extract.Debug {
         public class VersionInfo {
             public HashSet<MD5Hash> ContentHashes;
             public HashSet<ulong> GUIDs;
-            public HashSet<ulong> Added;
         }
 
-        public VersionInfo GetVersionInfoFake(string path) {
+        public static VersionInfo GetVersionInfoFake(string path) {
             VersionInfo info = new VersionInfo {
                 GUIDs = new HashSet<ulong>(),
                 ContentHashes = new HashSet<MD5Hash>(new MD5HashComparer())
@@ -104,8 +103,20 @@ namespace DataTool.ToolLogic.Extract.Debug {
 
             return info;
         }
+        
+        public static VersionInfo GetGUIDVersionInfo(string path) {
+            VersionInfo info = new VersionInfo {
+                GUIDs = new HashSet<ulong>()
+            };
+            
+            using (StreamReader reader = new StreamReader(path)) {
+                info.GUIDs = new HashSet<ulong>(reader.ReadToEnd().Split('\n').Select(x => x.TrimEnd('\r')).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => ulong.Parse(x, NumberStyles.HexNumber)));
+            }
 
-        public VersionInfo GetVersionInfo(string path) {
+            return info;
+        }
+
+        public static VersionInfo GetVersionInfo(string path) {
             VersionInfo info = new VersionInfo {
                 GUIDs = new HashSet<ulong>(),
                 ContentHashes = new HashSet<MD5Hash>(new MD5HashComparer())
@@ -133,7 +144,7 @@ namespace DataTool.ToolLogic.Extract.Debug {
 
             //VersionInfo versionInfo = GetVersionInfo(dataPath);
             //VersionInfo versionInfo = GetVersionInfoFake(@"D:\Code\Repos\overtool\OWLib-main\CASCEncDump\bin\Debug\44916.cmfhashes");
-            VersionInfo versionInfo = GetVersionInfoFake(@"D:\Code\Repos\overtool\OWLib-main\CASCEncDump\bin\Debug\47946.cmfhashes");
+            VersionInfo versionInfo = GetVersionInfoFake(@"D:\ow\resources\verdata\49154.cmfhashes");
             
             if (toolFlags is ExtractFlags flags) {
                 basePath = flags.OutputPath;
@@ -144,8 +155,8 @@ namespace DataTool.ToolLogic.Extract.Debug {
             const string container = "DebugNewEntities3";
             
             Combo.ComboInfo info = new Combo.ComboInfo();
-            AddNewHash(info, versionInfo, 0x7C);
-            //AddNewHash(info, versionInfo, 0x4);
+            //AddNewHash(info, versionInfo, 0x7C);
+            AddNewHash(info, versionInfo, 0x4);
             
             SaveLogic.Combo.Save(flags, Path.Combine(basePath, container), info);
             SaveLogic.Combo.SaveAllSoundFiles(flags, Path.Combine(basePath, container, "Sounds"), info);

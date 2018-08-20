@@ -1,9 +1,5 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Security.Cryptography;
-using CMFLib;
 using LZ4;
 using TankLib.CASC.Remote;
 
@@ -16,14 +12,13 @@ namespace TankLib.CASC {
         
         public readonly string CDNCachePath;
         public readonly string APMCachePath;
-        
-        private readonly string _cachePath;
+
         private readonly SyncDownloader _downloader;
 
         public Cache(string path) {
-            _cachePath = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), path);
-            CDNCachePath = Path.Combine(_cachePath, "CDN");
-            APMCachePath = Path.Combine(_cachePath, "APM");
+            string cachePath = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), path);
+            CDNCachePath = Path.Combine(cachePath, "CDN");
+            APMCachePath = Path.Combine(cachePath, "APM");
             
             _downloader = new SyncDownloader();
             
@@ -31,7 +26,6 @@ namespace TankLib.CASC {
                 if (!Directory.Exists(CDNCachePath)) {
                     Directory.CreateDirectory(CDNCachePath);
                 }
-                Console.Out.WriteLine("CASC Cache path is {0}", _cachePath);
             }
 
             if (CacheAPM) {

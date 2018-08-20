@@ -10,16 +10,17 @@ using DataTool.ConvertLogic;
 using DataTool.Flag;
 using DataTool.Helper;
 using DataTool.ToolLogic.Extract;
-using OWLib;
 using TankLib;
 using TankLib.ExportFormats;
 using static DataTool.Helper.IO;
 
 namespace DataTool.SaveLogic {
     public class Combo {
+        public static ScratchDB ScratchDBInstance = new ScratchDB();
+
         public static void Save(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info) {
             foreach (FindLogic.Combo.EntityInfoNew entity in info.Entities.Values) {
-                SaveEntity(flags, path, info, entity.GUID);
+                SaveEntity(path, info, entity.GUID);
             }
             foreach (FindLogic.Combo.EffectInfoCombo effectInfo in info.Effects.Values) {
                 SaveEffect(flags, path, info, effectInfo.GUID);
@@ -27,9 +28,6 @@ namespace DataTool.SaveLogic {
             foreach (FindLogic.Combo.ModelInfoNew model in info.Models.Values) {
                 SaveModel(flags, path, info, model.GUID);
             }
-            
-            // rules for threads:
-            // CASC IO MUST BE DONE IN MAIN THREAD. NO EXCEPTIONS
         }
 
         public static void SaveVoiceStimulus(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info,
@@ -40,41 +38,44 @@ namespace DataTool.SaveLogic {
             }
         }
 
-        public static void SaveEntity(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info,
-            ulong entity) {
-            FindLogic.Combo.EntityInfoNew entityInfo = info.Entities[entity];
-            Entity.OWEntityWriter entityWriter = new Entity.OWEntityWriter();
+        public static void SaveEntity(string path, FindLogic.Combo.ComboInfo info,
+            ulong entityGuid) {
+            FindLogic.Combo.EntityInfoNew entityInfo = info.Entities[entityGuid];
+            
+            Entity.OverwatchEntity entity = new Entity.OverwatchEntity(entityInfo, info);
+            
             string entityDir = Path.Combine(path, "Entities", entityInfo.GetName());
-            string outputFile = Path.Combine(entityDir, entityInfo.GetName() + entityWriter.Format);
+            string outputFile = Path.Combine(entityDir, entityInfo.GetName() + $".{entity.Extension}");
             CreateDirectoryFromFile(outputFile);
 
             using (Stream entityOutputStream = File.OpenWrite(outputFile)) {
                 entityOutputStream.SetLength(0);
-                entityWriter.Write(entityOutputStream, entityInfo, info);
+                entity.Write(entityOutputStream);
             }
 
             if (!info.SaveConfig.SaveAnimationEffects) return;
             if (entityInfo.Model == 0) return; 
             foreach (ulong animation in entityInfo.Animations) {
-                SaveAnimationEffectReference(flags, entityDir, info, animation, entityInfo.Model);
+                SaveAnimationEffectReference(entityDir, info, animation, entityInfo.Model);
             }
         }
 
-        public static void SaveAnimationEffectReference(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info,
+        public static void SaveAnimationEffectReference(string path, FindLogic.Combo.ComboInfo info,
             ulong animation, ulong model) {
             FindLogic.Combo.AnimationInfoNew animationInfo = info.Animations[animation];
-            Effect.OWAnimWriter animWriter = new Effect.OWAnimWriter();
-            string file = Path.Combine(path, Model.AnimationEffectDir,
-                animationInfo.GetNameIndex() + animWriter.Format);
+            
+            Effect.OverwatchAnimationEffectReference reference = new Effect.OverwatchAnimationEffectReference(info, animationInfo, model);
+            
+            string file = Path.Combine(path, Effect.OverwatchAnimationEffect.AnimationEffectDir,
+                animationInfo.GetNameIndex() + $".{reference.Extension}");
             CreateDirectoryFromFile(file);
             using (Stream outputStream = File.OpenWrite(file)) {
-                animWriter.WriteReference(outputStream, info, animationInfo, model);
+                reference.Write(outputStream);
             }
         }
 
         private static void ConvertAnimation(Stream animStream, string path, bool convertAnims, FindLogic.Combo.AnimationInfoNew animationInfo) {
-            animStream.Position = 0;
-            teAnimation parsedAnimation = new teAnimation(animStream);
+            teAnimation parsedAnimation = new teAnimation(animStream, true);
 
             string animationDirectory =
                 Path.Combine(path, "Animations", parsedAnimation.Header.Priority.ToString());
@@ -88,25 +89,24 @@ namespace DataTool.SaveLogic {
                     seAnim.Write(fileStream);
                 }
             } else {
+                animStream.Position = 0;
                 string rawAnimOutput = Path.Combine(animationDirectory,
-                    $"{animationInfo.GetNameIndex()}.{GUID.Type(animationInfo.GUID):X3}");
+                    $"{animationInfo.GetNameIndex()}.{teResourceGUID.Type(animationInfo.GUID):X3}");
                 CreateDirectoryFromFile(rawAnimOutput);
                 using (Stream fileStream = new FileStream(rawAnimOutput, FileMode.Create)) {
                     animStream.CopyTo(fileStream);
                 }
             }
-            animStream.Dispose();
         }
 
-        private static void SaveOWAnimFile(string animationEffectFile, FindLogic.Combo.EffectInfoCombo animationEffect, 
-            FindLogic.Combo.AnimationInfoNew animationInfo, FindLogic.Combo.ComboInfo info, 
-            Effect.OWAnimWriter owAnimWriter, ulong model, Dictionary<ulong, HashSet<FindLogic.Combo.VoiceLineInstanceInfo>> svceLines) {
-            CreateDirectoryFromFile(animationEffectFile);
-
-            using (Stream fileStream = new FileStream(animationEffectFile, FileMode.Create)) {
-                fileStream.SetLength(0);
-                owAnimWriter.Write(fileStream, info, animationInfo, animationEffect, model, svceLines);
+        public static string GetScratchRelative(ulong GUID, string cwd, string basePath) {
+            if (!Program.Flags.Deduplicate) {
+                return basePath;
             }
+            if (ScratchDBInstance.HasRecord(GUID)) {
+                return ScratchDBInstance[GUID].MakeRelative(cwd);
+            }
+            return basePath;
         }
 
         public static void SaveAnimation(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, ulong animation,
@@ -120,13 +120,8 @@ namespace DataTool.SaveLogic {
             FindLogic.Combo.AnimationInfoNew animationInfo = info.Animations[animation];
 
             using (Stream animStream = OpenFile(animation)) {
-                if (animStream == null) {
-                    return;
-                }
-                MemoryStream animMemStream = new MemoryStream();
-                animStream.CopyTo(animMemStream);
-                ConvertAnimation(animMemStream, path, convertAnims, animationInfo);
-                
+                if (animStream == null) return;
+                ConvertAnimation(animStream, path, convertAnims, animationInfo);
             }
 
             if (!info.SaveConfig.SaveAnimationEffects) return;
@@ -144,16 +139,21 @@ namespace DataTool.SaveLogic {
                 animationEffect = info.AnimationEffects[animationInfo.Effect];
             }
 
-            Effect.OWAnimWriter owAnimWriter = new Effect.OWAnimWriter();
-            string animationEffectDir = Path.Combine(path, Model.AnimationEffectDir, animationInfo.GetNameIndex());
-            string animationEffectFile =
-                Path.Combine(animationEffectDir, $"{animationInfo.GetNameIndex()}{owAnimWriter.Format}");
+            string animationEffectDir = Path.Combine(path, Effect.OverwatchAnimationEffect.AnimationEffectDir, animationInfo.GetNameIndex());
+            
             Dictionary<ulong, HashSet<FindLogic.Combo.VoiceLineInstanceInfo>> svceLines = new Dictionary<ulong, HashSet<FindLogic.Combo.VoiceLineInstanceInfo>>();
             if (animationEffect.GUID != 0) {
                 SaveEffectExtras(flags, animationEffectDir, info, animationEffect.Effect, out svceLines);
             }
-            
-            SaveOWAnimFile(animationEffectFile, animationEffect, animationInfo, info, owAnimWriter, model, svceLines);
+            Effect.OverwatchAnimationEffect output = new Effect.OverwatchAnimationEffect(info, animationEffect, svceLines, animationInfo, model);
+            string animationEffectFile =
+                Path.Combine(animationEffectDir, $"{animationInfo.GetNameIndex()}.{output.Extension}");
+            CreateDirectoryFromFile(animationEffectFile);
+
+            using (Stream fileStream = new FileStream(animationEffectFile, FileMode.Create)) {
+                fileStream.SetLength(0);
+                output.Write(fileStream);
+            }
         }
 
         public static void SaveEffectExtras(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info,
@@ -211,27 +211,30 @@ namespace DataTool.SaveLogic {
         }
 
         public static void SaveEffect(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, ulong effect) {
-            Effect.OWEffectWriter effectWriter = new Effect.OWEffectWriter();
             FindLogic.Combo.EffectInfoCombo effectInfo = info.Effects[effect];
             string effectDirectory = Path.Combine(path, "Effects", effectInfo.GetName());
-            string effectFile = Path.Combine(effectDirectory, $"{effectInfo.GetNameIndex()}{effectWriter.Format}");
-            CreateDirectoryFromFile(effectFile);
 
             SaveEffectExtras(flags, effectDirectory, info, effectInfo.Effect, out Dictionary<ulong, HashSet<FindLogic.Combo.VoiceLineInstanceInfo>> svceLines);
 
+            Effect.OverwatchEffect output = new Effect.OverwatchEffect(info, effectInfo, svceLines);
+            string effectFile = Path.Combine(effectDirectory, $"{effectInfo.GetNameIndex()}.{output.Extension}");
+            CreateDirectoryFromFile(effectFile);
+            
             using (Stream effectOutputStream = File.OpenWrite(effectFile)) {
                 effectOutputStream.SetLength(0);
-                effectWriter.Write(effectOutputStream, effectInfo, info, svceLines);
+                output.Write(effectOutputStream);
             }
         }
 
         public static void SaveModel(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, ulong modelGUID) {
             bool convertModels = true;
             bool doRefpose = false;
+            byte lod = 1;
 
             if (flags is ExtractFlags extractFlags) {
                 convertModels = extractFlags.ConvertModels  && !extractFlags.Raw;
                 doRefpose = extractFlags.ExtractRefpose;
+                lod = extractFlags.LOD;
                 if (extractFlags.SkipModels) return;
             }
             
@@ -245,7 +248,7 @@ namespace DataTool.SaveLogic {
                 using (Stream modelStream = OpenFile(modelInfo.GUID)) {
                     teChunkedData chunkedData = new teChunkedData(modelStream);
                     
-                    OverwatchModel model = new OverwatchModel(chunkedData);
+                    OverwatchModel model = new OverwatchModel(chunkedData, modelInfo.GUID, (sbyte)lod);
                     if (modelInfo.ModelLooks.Count > 0) {
                         FindLogic.Combo.ModelLookInfo modelLookInfo = info.ModelLooks[modelInfo.ModelLooks.First()];
                         model.ModelLookFileName = Path.Combine("ModelLooks",
@@ -258,7 +261,12 @@ namespace DataTool.SaveLogic {
 
                     if (doRefpose) {
                         string refposePath = Path.Combine(modelDirectory, modelInfo.GetNameIndex()+".smd");
-                        // todo
+                        
+                        using (Stream fileStream = File.OpenWrite(refposePath)) {
+                            fileStream.SetLength(0);
+                            var refpose = new RefPoseSkeleton(chunkedData);
+                            refpose.Write(fileStream);
+                        }
                     }
                 }
             } else {
@@ -280,22 +288,23 @@ namespace DataTool.SaveLogic {
             }
         }
 
-        public static void SaveOWMaterialModelLookFile(string path, FindLogic.Combo.ModelLookInfo modelLookInfo, Model.OWMatWriter14 materialWriter, FindLogic.Combo.ComboInfo info) {
+        public static void SaveOWMaterialModelLookFile(string path, FindLogic.Combo.ModelLookInfo modelLookInfo, FindLogic.Combo.ComboInfo info) {
+            Model.OverwatchModelLook modelLook = new Model.OverwatchModelLook(info, modelLookInfo);
+            
             string modelLookPath =
-                Path.Combine(path, "ModelLooks", $"{modelLookInfo.GetNameIndex()}{materialWriter.Format}");
+                Path.Combine(path, "ModelLooks", $"{modelLookInfo.GetNameIndex()}.{modelLook.Extension}");
             CreateDirectoryFromFile(modelLookPath);
             using (Stream modelLookOutputStream = File.OpenWrite(modelLookPath)) {
                 modelLookOutputStream.SetLength(0);
-                materialWriter.Write(modelLookOutputStream, info, modelLookInfo);
+                modelLook.Write(modelLookOutputStream);
             }
         }
 
         public static void SaveModelLook(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info,
             ulong modelLook) {
-            Model.OWMatWriter14 materialWriter = new Model.OWMatWriter14();
             FindLogic.Combo.ModelLookInfo modelLookInfo = info.ModelLooks[modelLook];
             
-            SaveOWMaterialModelLookFile(path, modelLookInfo, materialWriter, info);
+            SaveOWMaterialModelLookFile(path, modelLookInfo, info);
 
             if (modelLookInfo.Materials == null) return;
             foreach (ulong modelLookMaterial in modelLookInfo.Materials) {
@@ -303,13 +312,14 @@ namespace DataTool.SaveLogic {
             }
         }
 
-        public static void SaveOWMaterialFile(string path, FindLogic.Combo.MaterialInfo materialInfo, Model.OWMatWriter14 materialWriter, FindLogic.Combo.ComboInfo info) {
+        public static void SaveOWMaterialFile(string path, FindLogic.Combo.MaterialInfo materialInfo, FindLogic.Combo.ComboInfo info) {
+            Model.OverwatchMaterial material = new Model.OverwatchMaterial(info, materialInfo);
             string materialPath =
-                Path.Combine(path, "Materials", $"{materialInfo.GetNameIndex()}{materialWriter.Format}");
+                Path.Combine(path, "Materials", $"{materialInfo.GetNameIndex()}.{material.Extension}");
             CreateDirectoryFromFile(materialPath);
             using (Stream materialOutputStream = File.OpenWrite(materialPath)) {
                 materialOutputStream.SetLength(0);
-                materialWriter.Write(materialOutputStream, info, materialInfo);
+                material.Write(materialOutputStream);
             }
         }
 
@@ -327,19 +337,25 @@ namespace DataTool.SaveLogic {
             FindLogic.Combo.MaterialInfo materialInfo = info.Materials[material];
             FindLogic.Combo.MaterialDataInfo materialDataInfo = info.MaterialDatas[materialInfo.MaterialData];
 
-            Model.OWMatWriter14 materialWriter = new Model.OWMatWriter14();
-
             string textureDirectory = Path.Combine(path, "Textures");
             
-            SaveOWMaterialFile(path, materialInfo, materialWriter, info);
+            SaveOWMaterialFile(path, materialInfo, info);
 
-            foreach (KeyValuePair<ulong, uint> texture in materialDataInfo.Textures) {
-                SaveTexture(flags, textureDirectory, info, texture.Key);
+            if (materialDataInfo.Textures != null) {
+                foreach (KeyValuePair<ulong, uint> texture in materialDataInfo.Textures) {
+                    SaveTexture(flags, textureDirectory, info, texture.Key);
+                }
             }
         }
         
 
         // helpers (NOT FOR INTERNAL USE)
+        public static void SaveAllVoiceSets(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo soundInfo) {
+            foreach (KeyValuePair<ulong,FindLogic.Combo.VoiceSetInfo> voiceSet in soundInfo.VoiceSets) {
+                SaveVoiceSet(flags, path, soundInfo, voiceSet.Value);
+            }
+        }
+        
         public static void SaveLooseTextures(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info) {
             foreach (FindLogic.Combo.TextureInfoNew textureInfo in info.Textures.Values) {
                 if (!textureInfo.Loose) continue;
@@ -381,8 +397,8 @@ namespace DataTool.SaveLogic {
                 SaveModelLook(flags, path, info, material);
             }
         }
-        
-        #warning This method does not support animation effects
+
+#warning TODO: This method does not support animation effects
         public static void SaveAllAnimations(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info) {
             bool beforeSaveAnimEffects = info.SaveConfig.SaveAnimationEffects;
             info.SaveConfig.SaveAnimationEffects = false;
@@ -432,16 +448,25 @@ namespace DataTool.SaveLogic {
         public static void SaveTexture(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, ulong textureGUID) {
             bool convertTextures = true;
             string convertType = "dds";
+            bool lossless = false;
 
             if (flags is ExtractFlags extractFlags) {
                 convertTextures = extractFlags.ConvertTextures  && !extractFlags.Raw;
                 convertType = extractFlags.ConvertTexturesType.ToLowerInvariant();
+                lossless = extractFlags.ConvertTexturesLossless;
                 if (extractFlags.SkipTextures) return;
             }
             path += Path.DirectorySeparatorChar;
 
             FindLogic.Combo.TextureInfoNew textureInfo = info.Textures[textureGUID];
             string filePath = Path.Combine(path, $"{textureInfo.GetNameIndex()}");
+
+            if (Program.Flags.Deduplicate) {
+                if(ScratchDBInstance.HasRecord(textureGUID)) {
+                    return;
+                }
+                ScratchDBInstance[textureGUID] = new ScratchDB.ScratchPath($"{filePath}.{convertType}");
+            }
 
             CreateDirectoryFromFile(path);
             if (!convertTextures) {
@@ -456,6 +481,7 @@ namespace DataTool.SaveLogic {
                 }
             } else {
                 using (Stream textureStream = OpenFile(textureGUID)) {
+                    if (textureStream == null) return;
                     teTexture texture = new teTexture(textureStream);
 
                     if (texture.PayloadRequired) {
@@ -463,8 +489,9 @@ namespace DataTool.SaveLogic {
                     }
 
                     using (Stream convertedStream = texture.SaveToDDS()) {
-                        if (convertedStream.Length == 0) {
-                            WriteFile(convertedStream, $"{filePath}.{convertType}");
+                        convertedStream.Position = 0;
+                        if (convertType == "dds" || convertedStream.Length == 0) {
+                            WriteFile(convertedStream, $"{filePath}.dds");
                             return;
                         }
                         
@@ -472,77 +499,94 @@ namespace DataTool.SaveLogic {
                         bool isBcffValid = TextureConfig.DXGI_BC4.Contains((int) texture.Header.Format) ||
                                            TextureConfig.DXGI_BC5.Contains((int) texture.Header.Format) ||
                                            fourCC == TextureConfig.FOURCC_ATI1 || fourCC == TextureConfig.FOURCC_ATI2;
-
+                        
+                        
                         ImageFormat imageFormat = null;
                         if (convertType == "tif") imageFormat = ImageFormat.Tiff;
                         // if (convertType == "tga") imageFormat = Im.... oh
                         // so there is no TGA image format.
                         // guess the TGA users are stuck with the DirectXTex stuff for now.
 
-                        convertedStream.Position = 0;
                         if (isBcffValid && imageFormat != null) {
                             BlockDecompressor decompressor = new BlockDecompressor(convertedStream);
                             decompressor.CreateImage();
                             decompressor.Image.Save($"{filePath}.{convertType}", imageFormat);
                             return;
                         }
+                        
+                        string losslessFlag = lossless ? "-wiclossless" : string.Empty;
 
+                        Process pProcess = new Process {
+                            StartInfo = {
+                                FileName = "Third Party\\texconv.exe",
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardInput = true,
+                                RedirectStandardError = true,
+                                CreateNoWindow = true,
+                                Arguments =
+                                    $"-- \"{Path.GetFileName(filePath)}.dds\" -y -wicmulti {losslessFlag} -nologo -m 1 -ft {convertType} -f R8G8B8A8_UNORM -o \"{path}"
+                            },
+                            EnableRaisingEvents = true
+                        };
+
+                        // erm, so if you add an end quote to this then it breaks.
+                        // but start one on it's own is fine (we need something for "Winged Victory")
+                        pProcess.Start();
                         convertedStream.Position = 0;
-                        if (convertType == "tga" || convertType == "tif" || convertType == "dds") {
-                            // we need the dds for tif conversion
-                            WriteFile(convertedStream, $"{filePath}.dds");
-                        }
-                    }
-                    if (convertType != "tif" && convertType != "tga") return;
-                    using (Process texconvProcess = new Process {
-                        StartInfo = {
-                            FileName = "Third Party\\texconv.exe",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            Arguments =
-                                $"\"{filePath}.dds\" -y -wicmulti -nologo -m 1 -ft {convertType} -f R8G8B8A8_UNORM -o \"{path}"
-                        }
-                    }) {
-                        texconvProcess.Start();
+                        convertedStream.CopyTo(pProcess.StandardInput.BaseStream);
+                        pProcess.StandardInput.BaseStream.Close();
+
                         // pProcess.WaitForExit(); // not using this is kinda dangerous but I don't care
                         // when texconv writes with to the console -nologo is has done/failed conversion
-                        string line = texconvProcess.StandardOutput.ReadLine();
-                        if (line?.Contains($"{filePath}.dds FAILED") == false) {
-                            // fallback if convert fails
-                            File.Delete($"{filePath}.dds");
+                        string line = pProcess.StandardOutput.ReadLine();
+                        if (line?.Contains("FAILED") == true) {
+                            convertedStream.Position = 0;
+                            WriteFile(convertedStream, $"{filePath}.dds");
                         }
                     }
                 }
             }
         }
 
-        private static void ConvertSoundFile(Stream stream, FindLogic.Combo.SoundFileInfo soundFileInfo, string directory) {
-            string outputFile = Path.Combine(directory, $"{soundFileInfo.GetName()}.wem");
-            string outputFileOgg = Path.ChangeExtension(outputFile, "ogg");
+        private static void ConvertSoundFile(Stream stream, FindLogic.Combo.SoundFileInfo soundFileInfo, string directory)
+        {
+            string outputFile = Path.Combine(directory, $"{soundFileInfo.GetName()}.ogg");
             CreateDirectoryFromFile(outputFile);
-            try {
+            using (Stream outputStream = File.OpenWrite(outputFile))
+            {
+                outputStream.SetLength(0);
+                ConvertSoundFile(stream, outputStream);
+            }
+        }
+
+
+        public static void ConvertSoundFile(Stream stream, Stream outputStream)
+        {
+            try
+            {
                 using (Sound.WwiseRIFFVorbis vorbis =
                     new Sound.WwiseRIFFVorbis(stream,
                         Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Third Party",
-                            "packed_codebooks_aoTuV_603.bin")))) {
+                            "packed_codebooks_aoTuV_603.bin"))))
+                {
                     Stream vorbisStream = new MemoryStream();
                     vorbis.ConvertToOgg(vorbisStream);
                     vorbisStream.Position = 0;
-                    using (Stream revorbStream = RevorbStd.Revorb.Jiggle(vorbisStream)) {
-                        using (Stream outputStream = File.OpenWrite(outputFileOgg)) {
-                            outputStream.SetLength(0);
-                            revorbStream.Position = 0;
-                            revorbStream.CopyTo(outputStream);
-                        }
+                    using (Stream revorbStream = RevorbStd.Revorb.Jiggle(vorbisStream))
+                    {
+                        revorbStream.Position = 0;
+                        revorbStream.CopyTo(outputStream);
                     }
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 Console.Out.WriteLine(e);
             }
         }
 
         public static void SaveSoundFile(ICLIFlags flags, string directory, FindLogic.Combo.ComboInfo info, ulong soundFile, bool voice) {
-            // info.SaveConfig.Tasks.Add(Task.Run(() => { SaveSoundFile(flags, directory, info, soundFile, voice); }));
             bool convertWem = true;
             if (flags is ExtractFlags extractFlags) {
                 convertWem = extractFlags.ConvertSound && !extractFlags.Raw;
@@ -551,14 +595,14 @@ namespace DataTool.SaveLogic {
             
             FindLogic.Combo.SoundFileInfo soundFileInfo = voice ? info.VoiceSoundFiles[soundFile] : info.SoundFiles[soundFile];
 
-            Stream soundStream = OpenFile(soundFile);  // disposed by thread
-            if (soundStream == null) return;
+            using (Stream soundStream = OpenFile(soundFile)) {
+                if (soundStream == null) return;
 
-            if (!convertWem) {
-                WriteFile(soundStream, Path.Combine(directory, $"{soundFileInfo.GetName()}.wem"));
-                soundStream.Dispose();
-            } else {
-                ConvertSoundFile(soundStream, soundFileInfo, directory);
+                if (!convertWem) {
+                    WriteFile(soundStream, Path.Combine(directory, $"{soundFileInfo.GetName()}.wem"));
+                } else {
+                    ConvertSoundFile(soundStream, soundFileInfo, directory);
+                }
             }
         }
     }

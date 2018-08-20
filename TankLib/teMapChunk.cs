@@ -119,7 +119,7 @@ namespace TankLib {
                                 teStructuredData structuredData = new teStructuredData(reader);
                                 entity.InstanceData[i] = structuredData.GetInstance<STUComponentInstanceData>();
                                 AlignPosition(beforePos, reader, structuredData);
-                            } catch (Exception e) {
+                            } catch (Exception) {
                                 execCount++;
                                 AlignPositionInternal(reader, beforePos + 8); // try and recover
                             }
@@ -257,7 +257,7 @@ namespace TankLib {
             public byte Unknown2D;
             public uint Unknown3A;
             public uint Unknown3B;
-            public uint Type;      // 1 = Spot Light, 2 = Point Light, 0 = Directional?
+            public teLIGHTTYPE Type;
             public teColorRGB Color;
             public teVec3 UnknownPos1;
             public teQuat UnknownQuat1;
@@ -284,6 +284,16 @@ namespace TankLib {
     
     public class teMapPlaceableSingleModel : IMapPlaceable {
         public teMAP_PLACEABLE_TYPE Type => teMAP_PLACEABLE_TYPE.SINGLE_MODEL;
+
+        public teMapPlaceableModel.Structure Header;
+
+        public void Read(BinaryReader reader) {
+            Header = reader.Read<teMapPlaceableModel.Structure>();
+        }
+    }
+    
+    public class teMapPlaceableModel : IMapPlaceable {
+        public teMAP_PLACEABLE_TYPE Type => teMAP_PLACEABLE_TYPE.MODEL;
         
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
         public struct Structure {
@@ -299,16 +309,6 @@ namespace TankLib {
 
         public void Read(BinaryReader reader) {
             Header = reader.Read<Structure>();
-        }
-    }
-    
-    public class teMapPlaceable8 : IMapPlaceable {
-        public teMAP_PLACEABLE_TYPE Type => (teMAP_PLACEABLE_TYPE)8;
-
-        public teMapPlaceableSingleModel.Structure Header;
-
-        public void Read(BinaryReader reader) {
-            Header = reader.Read<teMapPlaceableSingleModel.Structure>();
         }
     }
     
@@ -363,8 +363,8 @@ namespace TankLib {
         }
 
         public IMapPlaceable CreateType(teMapPlaceableData.CommonStructure commonStructure, BinaryReader reader) {
-            if (Types.ContainsKey(commonStructure.Type)) {
-                IMapPlaceable value = (IMapPlaceable)Activator.CreateInstance(Types[commonStructure.Type]);
+            if (Types.TryGetValue(commonStructure.Type, out Type placeableType)) {
+                IMapPlaceable value = (IMapPlaceable)Activator.CreateInstance(placeableType);
                 value.Read(reader);
                 return value;
             }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using DirectXTexNet;
 using TankLib;
@@ -10,11 +12,13 @@ using TankLib.CASC;
 using TankLib.CASC.Handlers;
 using TankLib.CASC.Helpers;
 using TankView.Helper;
+using TankView.Properties;
+using TankView.View;
 using static TankLib.CASC.ApplicationPackageManifest.Types;
 
 namespace TankView.ViewModel
 {
-    public class GUIDCollection : INotifyPropertyChanged
+    public class GUIDCollection : INotifyPropertyChanged, IDisposable
     {
         private CASCConfig Config;
         private CASCHandler CASC;
@@ -25,37 +29,133 @@ namespace TankView.ViewModel
             get {
                 return _top;
             } set {
-                ImageSource = ImageHelper.ConvertDDS(value, DXGI_FORMAT.R8G8B8A8_UNORM, ImageHelper.ImageFormat.PNG, 0);
+                UpdateControl(value);
                 _top = value;
                 NotifyPropertyChanged(nameof(TopSelectedEntry));
             }
         }
 
-
-        private BitmapSource _frame = null;
-
-        private byte[] _image = null;
-        public byte[] ImageSource {
-            get {
-                return _image;
-            } set {
-                if (value != null)
-                {
-                    MemoryStream stream = new MemoryStream(value);
-                    PngBitmapDecoder decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
-                    _frame = decoder.Frames[0];
-                }
-                _image = value;
-                NotifyPropertyChanged(nameof(ValidImage));
-                NotifyPropertyChanged(nameof(ImageWidth));
-                NotifyPropertyChanged(nameof(ImageHeight));
-                NotifyPropertyChanged(nameof(ImageSource));
+        private void UpdateControl(GUIDEntry value)
+        {
+            if (PreviewControl is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+            if (PreviewSource is IDisposable disposable2)
+            {
+                disposable2.Dispose();
+            }
+            if (!ShowPreview)
+            {
+                PreviewSource = null;
+                PreviewControl = null;
+            }
+            switch (DataHelper.GetDataType(value))
+            {
+                case DataHelper.DataType.Image:
+                    {
+                        PreviewSource = DataHelper.ConvertDDS(value, DXGI_FORMAT.R8G8B8A8_UNORM, DataHelper.ImageFormat.PNG, 0);
+                        PreviewControl = new PreviewDataImage();
+                    }
+                    break;
+                case DataHelper.DataType.Sound:
+                    {
+                        PreviewSource = DataHelper.ConvertSound(value);
+                        PreviewControl = new PreviewDataSound();
+                        (PreviewControl as PreviewDataSound).SetAudio(PreviewSource as Stream);
+                    }
+                    break;
+                case DataHelper.DataType.Model:
+                    {
+                        PreviewSource = null;
+                        PreviewControl = new PreviewDataModel();
+                    }
+                    break;
+                case DataHelper.DataType.String:
+                    {
+                        PreviewSource = DataHelper.GetString(value);
+                        PreviewControl = new PreviewDataString();
+                    }
+                    break;
+                default:
+                    {
+                        PreviewSource = null;
+                        PreviewControl = null;
+                    }
+                    break;
             }
         }
 
-        public bool ValidImage {
+        private Control _control = null;
+
+        public Control PreviewControl {
             get {
-                return _image != null;
+                return _control;
+            } set {
+                _control = value;
+                NotifyPropertyChanged(nameof(PreviewControl));
+            }
+        }
+
+        private BitmapSource _frame = null;
+        
+        public bool ShowPreview {
+            get {
+                return Settings.Default.ShowPreview;
+            }
+            set {
+                Settings.Default.ShowPreview = value;
+                Settings.Default.Save();
+                UpdateControl(_top);
+                NotifyPropertyChanged(nameof(ShowPreview));
+                NotifyPropertyChanged(nameof(ListRow));
+                NotifyPropertyChanged(nameof(PreviewRow));
+            }
+        }
+
+        public GridLength ListRow {
+            get {
+                if (ShowPreview)
+                {
+                    return new GridLength(250, GridUnitType.Pixel);
+                }
+                return new GridLength(1, GridUnitType.Star);
+            }
+        }
+
+        public GridLength PreviewRow {
+            get {
+                if (ShowPreview)
+                {
+                    return new GridLength(1, GridUnitType.Star);
+                }
+                return new GridLength(0);
+            }
+        }
+
+        private object _previewData = null;
+        public object PreviewSource {
+            get {
+                return _previewData;
+            } set {
+                _frame = null;
+                if (value != null)
+                {
+                    switch (DataHelper.GetDataType(_top))
+                    {
+                        case DataHelper.DataType.Image:
+                            {
+                                MemoryStream stream = new MemoryStream((byte[])value);
+                                PngBitmapDecoder decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
+                                _frame = decoder.Frames[0];
+                            }
+                            break;
+                    }
+                }
+                _previewData = value;
+                NotifyPropertyChanged(nameof(ImageWidth));
+                NotifyPropertyChanged(nameof(ImageHeight));
+                NotifyPropertyChanged(nameof(PreviewSource));
             }
         }
 
@@ -92,6 +192,8 @@ namespace TankView.ViewModel
 
         public Folder Data = new Folder("/", "/");
 
+        public GUIDCollection() { }
+
         public GUIDCollection(CASCConfig Config, CASCHandler CASC, ProgressReportSlave Slave)
         {
             this.Config = Config;
@@ -120,7 +222,14 @@ namespace TankView.ViewModel
                     {
                         Slave?.ReportProgress((int)(((float)c / (float)total) * 100));
                     }
-                    AddEntry($"files/{Path.GetFileNameWithoutExtension(apm.Name)}/{teResourceGUID.Type(record.Key):X3}", record.Key, apm, record.Value.LoadHash, (int)record.Value.Size, (int)record.Value.Offset, record.Value.Flags, apm.Locale);
+                    ushort typeVal = teResourceGUID.Type(record.Key);
+                    string typeStr = typeVal.ToString("X3");
+                    DataHelper.DataType typeData = DataHelper.GetDataType(typeVal);
+                    if(typeData != DataHelper.DataType.Unknown)
+                    {
+                        typeStr = $"{typeStr} ({typeData.ToString()})";
+                    }
+                    AddEntry($"files/{Path.GetFileNameWithoutExtension(apm.Name)}/{typeStr}", record.Key, apm, record.Value.LoadHash, (int)record.Value.Size, (int)record.Value.Offset, record.Value.Flags, apm.Locale);
                 }
             }
 
@@ -206,6 +315,18 @@ namespace TankView.ViewModel
         public void NotifyPropertyChanged(string name)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+
+        public void Dispose()
+        {
+            if (PreviewControl is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+            if (PreviewSource is IDisposable disposable2)
+            {
+                disposable2.Dispose();
+            }
         }
     }
 }

@@ -9,10 +9,10 @@ using CMFLib;
 using DataTool.ConvertLogic;
 using DataTool.Flag;
 using DataTool.Helper;
-using OWLib;
-using STULib.Types;
 using TankLib.CASC;
 using TankLib.CASC.Handlers;
+using TankLib.STU;
+using TankLib.STU.Types;
 using static DataTool.Helper.Logger;
 using static DataTool.Helper.STUHelper;
 
@@ -31,6 +31,10 @@ namespace DataTool {
         public static bool ValidKey(ulong key) => Files.ContainsKey(key);
         
         private static void Main() {
+            AppDomain.CurrentDomain.UnhandledException += ExceptionHandler;
+            Process.GetCurrentProcess().EnableRaisingEvents = true;
+            AppDomain.CurrentDomain.ProcessExit += (sender, @event) => Console.ForegroundColor = ConsoleColor.Gray;
+            Console.CancelKeyPress += (sender, @event) => Console.ForegroundColor = ConsoleColor.Gray;
             Console.OutputEncoding = Encoding.UTF8;
 
             Files = new Dictionary<ulong, ApplicationPackageManifest.Types.PackageRecord>();
@@ -80,7 +84,7 @@ namespace DataTool {
                 if (attrib.CustomFlags != null) {
                     Type flags = attrib.CustomFlags;
                     if (typeof(ICLIFlags).IsAssignableFrom(flags)) {
-                        targetToolFlags = typeof(FlagParser).GetMethod("Parse", new Type[] { }).MakeGenericMethod(flags).Invoke(null, null) as ICLIFlags;
+                        targetToolFlags = typeof(FlagParser).GetMethod(nameof(FlagParser.Parse), new Type[] { }).MakeGenericMethod(flags).Invoke(null, null) as ICLIFlags;
                     }
                 }
                 break;
@@ -96,17 +100,18 @@ namespace DataTool {
                 }
                 return;
             }
+            
+            TankLib.Helpers.Logger.Info("Core", $"{Assembly.GetExecutingAssembly().GetName().Name} v{TankLib.Util.GetVersion(typeof(Program).Assembly)}");
+            TankLib.Helpers.Logger.Info("Core", $"CommandLine: [{string.Join(", ", Environment.GetCommandLineArgs().Skip(1).Select(x => $"\"{x}\""))}]");
 
             #region Initialize CASC
-            Log("{0} v{1}", Assembly.GetExecutingAssembly().GetName().Name, Util.GetVersion());
-            Log("Initializing CASC...");
             if (Flags.Language != null)
             {
-                Log("Set language to {0}", Flags.Language);
+                TankLib.Helpers.Logger.Info("CASC", $"Set language to {Flags.Language}");
             }
             if (Flags.SpeechLanguage != null)
             {
-                Log("Set speech language to {0}", Flags.SpeechLanguage);
+                TankLib.Helpers.Logger.Info("CASC", $"Set speech language to {Flags.SpeechLanguage}");
             }
 
             CASCHandler.Cache.CacheAPM = Flags.UseCache;
@@ -115,15 +120,33 @@ namespace DataTool {
             Config = CASCConfig.LoadFromString(Flags.OverwatchDirectory, Flags.SkipKeys);
             Config.SpeechLanguage = Flags.SpeechLanguage ?? Flags.Language ?? Config.SpeechLanguage;
             Config.TextLanguage = Flags.Language ?? Config.TextLanguage;
+
+            if (Config != null) {
+                if (!Config.InstallData.Settings.Languages.Select(x => x.Language).Contains(Config.TextLanguage)) {
+                    TankLib.Helpers.Logger.Warn("Core", "Battle.Net Agent reports that language {0} is not installed.", Config.TextLanguage);
+                } else if (!Config.InstallData.Settings.Languages.Select(x => x.Language).Contains(Config.SpeechLanguage)) {
+                    TankLib.Helpers.Logger.Warn("Core", "Battle.Net Agent reports that language {0} is not installed.", Config.SpeechLanguage);
+                }
+
+                if (Config.InstallData.Uid != "prometheus") {
+                    TankLib.Helpers.Logger.Warn("Core", $"The branch \"{Config.InstallData.Uid}\" is not supported!. This might result in failure to load. Proceed with caution.");
+                }
+            }
             #endregion
+
 
             BuildVersion = uint.Parse(Config.BuildVersion.Split('.').Last());
 
-            if (Flags.SkipKeys) {
-                Log("Disabling Key auto-detection...");
+            if (BuildVersion < 39028) {
+                TankLib.Helpers.Logger.Error("Core", "DataTool doesn't support Overwatch versions below 1.14. Please use OverTool");
+            } else if (BuildVersion < 39241) {
+                TankLib.Helpers.Logger.Error("Core", "DataTool doesn't support this 1.14 release as it uses unmangeled hashes");
+            } else if (BuildVersion < 49154) {
+                TankLib.Helpers.Logger.Error("Core", "This version of DataTool doesn't properly support versions below 1.26. Please downgrade DataTool.");
             }
 
-            Log("Using Overwatch Version {0}", Config.BuildVersion);
+            TankLib.Helpers.Logger.Info("Core", $"Using Overwatch Version {Config.BuildVersion}");
+            TankLib.Helpers.Logger.Info("CASC", "Initializing...");
             CASC = CASCHandler.Open(Config);
             Root = CASC.RootHandler;
             //if (Root== null) {
@@ -131,15 +154,17 @@ namespace DataTool {
             //    return;
             //}
 
+            if (Config.InstallData != null) {
+                
+            }
+            
             // Fail when trying to extract data from a specified language with 2 or less files found.
             if (!Root.APMFiles.Any()) {
-                ErrorLog("Could not find the files for language {0}. Please confirm that you have that language installed, and are using the names from the target language.", Flags.Language);
-                if (!Flags.GracefulExit) {
+                TankLib.Helpers.Logger.Error("Core", "Unable to load APM files for language {0}. Please confirm that you have that language installed.", Flags.Language);
                     return;
-                }
             }
 
-            Log("Mapping...");
+            TankLib.Helpers.Logger.Info("Core", "Mapping storage");
             TrackedFiles[0x90] = new HashSet<ulong>();
             IO.MapCMF();
             IO.LoadGUIDTable();
@@ -152,7 +177,7 @@ namespace DataTool {
 
             #region Key Detection
             if (!Flags.SkipKeys) {
-                Log("Adding Encryption Keys...");
+                TankLib.Helpers.Logger.Info("Core", "Checking ResourceKeys");
 
                 foreach (ulong key in TrackedFiles[0x90]) {
                     if (!ValidKey(key)) {
@@ -163,28 +188,58 @@ namespace DataTool {
                             continue;
                         }
 
-                        STUEncryptionKey encryptionKey = GetInstance<STUEncryptionKey>(key);
-                        if (encryptionKey == null || encryptionKey.LongKey == 0 || TACTKeyService.Keys.ContainsKey(encryptionKey.LongRevKey)) continue;
-                        TACTKeyService.Keys.Add(encryptionKey.LongRevKey, encryptionKey.KeyValue);
-                        Log("Added Encryption Key {0}, Value: {1}", encryptionKey.KeyNameProper, encryptionKey.KeyValueString);
+                        STUResourceKey resourceKey = GetInstance<STUResourceKey>(key);
+                        if (resourceKey == null || resourceKey.GetKeyID() == 0 || TACTKeyService.Keys.ContainsKey(resourceKey.GetReverseKeyID())) continue;
+                        TACTKeyService.Keys.Add(resourceKey.GetReverseKeyID(), resourceKey.m_key);
+                        TankLib.Helpers.Logger.Info("Core", $"Added ResourceKey {resourceKey.GetKeyIDString()}, Value: {resourceKey.GetKeyValueString()}");
                     }
                 }
             }
             #endregion
-            Stopwatch stopwatch = new Stopwatch();
             
-            Log("Tooling...");
+            Stopwatch stopwatch = new Stopwatch();
+            TankLib.Helpers.Logger.Info("Core", "Tooling...");
+            var dbPath = Flags.ScratchDBPath;
+            if (Flags.Deduplicate) {
+                TankLib.Helpers.Logger.Warn("ScratchDB", "Will attempt to deduplicate files if extracting...");
+                if(!string.IsNullOrWhiteSpace(Flags.ScratchDBPath)) {
+                    TankLib.Helpers.Logger.Warn("ScratchDB", "Loading deduplication database...");
+                    if (!File.Exists(dbPath)) {
+                        dbPath = Path.Combine(Path.GetFullPath(Flags.ScratchDBPath), "Scratch.db");
+                    }
+                    SaveLogic.Combo.ScratchDBInstance.Load(dbPath);
+                }
+            }
             stopwatch.Start();
             targetTool.Parse(targetToolFlags);
             stopwatch.Stop();
             
-            Console.Out.WriteLine($"Execution finished in {stopwatch.Elapsed} seconds");
+            TankLib.Helpers.Logger.Success("Core", $"Execution finished in {stopwatch.Elapsed} seconds");
+
+            if(Flags.Deduplicate && !string.IsNullOrWhiteSpace(dbPath)) {
+                TankLib.Helpers.Logger.Warn("ScratchDB", "Saving deduplication database...");
+                SaveLogic.Combo.ScratchDBInstance.Save(dbPath);
+            }
 
             if (Debugger.IsAttached) {
                 Debugger.Break();
             }
         }
-        
+
+        [DebuggerStepThrough]
+        private static void ExceptionHandler(object sender, UnhandledExceptionEventArgs e) {
+            Exception ex = e.ExceptionObject as Exception;
+            if (ex != null) {
+                TankLib.Helpers.Logger.Error(null, ex.ToString());
+                if (Debugger.IsAttached) {
+                    throw ex;
+                }
+            }
+            unchecked {
+                Environment.Exit((int)0xDEADBEEF);
+            }
+        }
+
         internal class ToolComparer : IComparer<Type> {
             public int Compare(Type x, Type y) {
                 ToolAttribute xT = x.GetCustomAttribute<ToolAttribute>();

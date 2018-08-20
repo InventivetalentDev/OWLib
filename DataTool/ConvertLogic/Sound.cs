@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using static OWLib.Extensions;
+using static TankLib.Extensions;
 
 namespace DataTool.ConvertLogic {
     public static class Sound {
@@ -485,8 +485,8 @@ namespace DataTool.ConvertLogic {
                     VorbisPacketHeader vhead = new VorbisPacketHeader(3);
                     os.Write(vhead);
                     
-                    // const string vendor = "Converted from Audiokinetic Wwise by DataTool";
-                    const string vendor = "converted from Audiokinetic Wwise by ww2ogg 0.24"; // I want the correct checksums for now
+                    const string vendor = "Converted from Audiokinetic Wwise by DataTool";
+                    //const string vendor = "converted from Audiokinetic Wwise by ww2ogg 0.24"; // I want the correct checksums for now
                     
                     BitUint vendorSize = new BitUint(32, (uint)vendor.Length);
                     os.Write(vendorSize);
@@ -551,7 +551,7 @@ namespace DataTool.ConvertLogic {
                         ss.Read(codebookID);
                         try {
                             library.Rebuild(codebookID.AsInt(), os); // todo: build once and just reuse data.
-                        } catch (CodebookLibrary.InvalidID e) {
+                        } catch (CodebookLibrary.InvalidID) {
                             //         B         C         V
                             //    4    2    4    3    5    6
                             // 0100 0010 0100 0011 0101 0110
@@ -1137,9 +1137,10 @@ namespace DataTool.ConvertLogic {
             
             public void Read(BinaryReader reader) {
                 // using a different structure to the wiki :thinking:
-                Location = (SoundLocation)reader.ReadUInt32();
-                
-                byte unknown = reader.ReadByte();
+                Location = (SoundLocation)reader.ReadByte();
+
+                ushort u1 = reader.ReadUInt16();
+                ushort u2 = reader.ReadUInt16();
 
                 SoundID = reader.ReadUInt32();
             }
@@ -1177,7 +1178,7 @@ namespace DataTool.ConvertLogic {
             public uint[] Actions;
             
             public void Read(BinaryReader reader) {
-                uint numActions = reader.ReadUInt32();
+                byte numActions = reader.ReadByte();
 
                 Actions = new uint[numActions];
                 for (int i = 0; i < numActions; i++) {
@@ -1208,7 +1209,8 @@ namespace DataTool.ConvertLogic {
             }
             
             public void Read(BinaryReader reader) {
-                throw new NotImplementedException(); // untested but you can try if you are brave
+                // untested but you can try if you are brave
+#if I_CAN_SIMPLY_SNAP_MY_FINGERS
                 bool overrideParentSettingsEffect = reader.ReadBoolean();  // whether to override parent settings for Effects section
                 byte numEffects = reader.ReadByte();
 
@@ -1237,6 +1239,9 @@ namespace DataTool.ConvertLogic {
                 
                 // byte zero2 = reader.ReadByte();
                 // Debug.Assert(zero2 == 0);
+#else
+                throw new NotImplementedException();
+#endif
             }
         }
         
@@ -1322,8 +1327,7 @@ namespace DataTool.ConvertLogic {
                             uint objectID = reader.ReadUInt32();
 
                             if (Types.ContainsKey(objectType)) {
-                                IBankObject bankObject = Activator.CreateInstance(Types[objectType]) as IBankObject;
-                                if (bankObject == null) continue;
+                                if (!(Activator.CreateInstance(Types[objectType]) is IBankObject bankObject)) continue;
                                 bankObject.Read(reader);
                                 Objects[objectID] = bankObject;
                             } else {
@@ -1363,7 +1367,6 @@ namespace DataTool.ConvertLogic {
     }
 
     
-    // todo: this is closer than before but data is written wrong.
     public class BitOggstream : IDisposable {
         private readonly BinaryWriter _os;
 

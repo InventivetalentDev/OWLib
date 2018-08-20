@@ -1,9 +1,9 @@
-﻿using System;
-using DataTool.Helper;
+﻿using DataTool.Helper;
 using DataTool.JSON;
 using Newtonsoft.Json;
-using STULib.Types.Enums;
+using Newtonsoft.Json.Converters;
 using TankLib.STU.Types;
+using TankLib.STU.Types.Enums;
 using static DataTool.Helper.IO;
 
 namespace DataTool.DataModels {
@@ -11,7 +11,9 @@ namespace DataTool.DataModels {
     public class Loadout {
         public string Name;
         public string Description;
-        public string Category;
+        
+        [JsonConverter(typeof(StringEnumConverter))]
+        public LoadoutCategory Category;
         
         [JsonConverter(typeof(GUIDConverter))]
         public ulong GUID;
@@ -19,7 +21,7 @@ namespace DataTool.DataModels {
         public ulong MovieGUID;
 
         public Loadout(ulong key) {
-            STULoadout loadout = STUHelper.GetInstanceNew<STULoadout>(key);
+            STULoadout loadout = STUHelper.GetInstance<STULoadout>(key);
             if (loadout == null) return;
             Init(key, loadout);
         }
@@ -32,7 +34,7 @@ namespace DataTool.DataModels {
             GUID = key;
             MovieGUID = loadout.m_infoMovie;
             
-            Category = Enum.GetName(typeof(LoadoutCategory), loadout.m_category);
+            Category = loadout.m_category;
             
             Name = GetString(loadout.m_name);
             Description = GetString(loadout.m_description);

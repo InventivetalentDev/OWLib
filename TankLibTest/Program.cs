@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using STULib;
 using TankLib;
 using TankLib.CASC;
 using TankLib.CASC.Handlers;
@@ -83,13 +82,7 @@ namespace TankLibTest {
             //TestAnimation();
             //TestSTUv1();
         }
-
-        public static void TestSTUv1() {
-            using (Stream stream = OpenFile(837669530690912383)) {  // 00000000007F.05E
-                //teStructuredData structuredData = new teStructuredData(stream);
-                ISTU stu = ISTU.NewInstance(stream, UInt32.MaxValue);
-            }
-        }
+        
         public static void TestBinarySpeed() {
             Stopwatch stopwatch = new Stopwatch();
             
@@ -255,12 +248,12 @@ namespace TankLibTest {
         
         public static void TestTexturePayload() {
             teResourceGUID guid = (teResourceGUID)0xC00000000000A00;
-            teResourceGUID payloadGuid = (teResourceGUID)(((ulong)guid & 0xF0FFFFFFFFUL) | 0x100000000UL | 0x0320000000000000UL);
+            teResourceGUID payloadGuid = (teResourceGUID)((guid & 0xF0FFFFFFFFUL) | 0x100000000UL | 0x0320000000000000UL);
             teTexture texture;
-            using (Stream textureStream = OpenFile((ulong) guid)) {
+            using (Stream textureStream = OpenFile(guid)) {
                 texture = new teTexture(textureStream);
             }
-            using (Stream texturePayloadStream = OpenFile((ulong) payloadGuid)) {
+            using (Stream texturePayloadStream = OpenFile(payloadGuid)) {
                 texture.LoadPayload(texturePayloadStream);
             }
             
@@ -271,7 +264,7 @@ namespace TankLibTest {
 
         public static void TestTexture() {
             teResourceGUID guid = (teResourceGUID)0xC0000000000C708;
-            using (Stream textureStream = OpenFile((ulong) guid)) {
+            using (Stream textureStream = OpenFile(guid)) {
                 teTexture texture = new teTexture(textureStream);
                 using (Stream file = File.OpenWrite(guid+".dds")) {
                     texture.SaveToDDS(file);
@@ -349,7 +342,7 @@ namespace TankLibTest {
             using (Stream matStream = OpenFile(guid)) {
                 material = new teMaterial(matStream);
 
-                using (Stream matDataStream = OpenFile((ulong) material.Header.MaterialData)) {
+                using (Stream matDataStream = OpenFile(material.Header.MaterialData)) {
                     materialData = new teMaterialData(matDataStream);
                 }
             }

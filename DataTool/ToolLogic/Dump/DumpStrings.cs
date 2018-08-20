@@ -4,13 +4,13 @@ using System.Linq;
 using DataTool.Flag;
 using DataTool.JSON;
 using Newtonsoft.Json;
-using OWLib;
+using TankLib;
 using static DataTool.Helper.IO;
 using static DataTool.Program;
 using static DataTool.Helper.Logger;
 
 namespace DataTool.ToolLogic.Dump {
-    [Tool("dump-strings", Description = "Dumps all the strings", TrackTypes = new ushort[] { 0x7C }, CustomFlags = typeof(DumpFlags))]
+    [Tool("dump-strings", Description = "Dump strings", TrackTypes = new ushort[] { 0x7C }, CustomFlags = typeof(DumpFlags))]
     public class DumpStrings : JSONTool, ITool {
         public void IntegrateView(object sender) {
             throw new NotImplementedException();
@@ -50,11 +50,10 @@ namespace DataTool.ToolLogic.Dump {
         public List<StringInfo> GetStrings() {
             var strings = new List<StringInfo>();
 
-            foreach (var key in TrackedFiles[0x7C].OrderBy(GUID.Index)) {
+            foreach (var key in TrackedFiles[0x7C].OrderBy(teResourceGUID.Index)) {
                 var str = GetString(key);
-                var fileName = GetFileName(key);
-                if (str == null || fileName == null) continue;
-                strings.Add(new StringInfo(key, fileName, str));
+                if (str == null) continue;
+                strings.Add(new StringInfo(key, GetFileName(key), str));
             }
 
             return strings;

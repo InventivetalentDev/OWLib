@@ -1,5 +1,5 @@
-﻿using DataTool.JSON;
-using DataTool.ToolLogic.Extract;
+﻿using System.Collections.Generic;
+using DataTool.JSON;
 using Newtonsoft.Json;
 using TankLib;
 using TankLib.STU.Types;
@@ -10,6 +10,9 @@ namespace DataTool.DataModels {
     [JsonObject(MemberSerialization.OptOut)]
     public class LootBox {
         public string Name;
+        
+        // note: not string becuase we actually want the int here
+        // todo: should populate this enum or something
         public Enum_BABC4175 LootBoxType;
 
         public LootBoxShopCard[] ShopCards;
@@ -21,7 +24,7 @@ namespace DataTool.DataModels {
         }
 
         private void Init(STULootBox lootBox) {
-            Name = ExtractHeroUnlocks.GetLootBoxName(lootBox.m_lootboxType);
+            Name = GetName(lootBox.m_lootboxType);
             LootBoxType = lootBox.m_lootboxType;
 
             HidePucks = lootBox.m_hidePucks == 1;
@@ -33,6 +36,39 @@ namespace DataTool.DataModels {
                 }
             }
         }
+
+        public static string GetName(uint type) {
+            if (LootBoxNames.TryGetValue(type, out string lootboxName)) {
+                return lootboxName;
+            }
+            return $"Unknown{type}";
+        }
+
+        public static string GetName(Enum_BABC4175 lootBoxType) {
+            return GetName((uint)lootBoxType);
+        }
+
+        public static string GetBasicName(uint type) {
+            return GetName(type).Replace(" ", "").ToLowerInvariant();
+        }
+
+        public static string GetBasicName(Enum_BABC4175 lootBoxType) {
+            return GetBasicName((uint) lootBoxType);
+        }
+
+        private static readonly Dictionary<uint, string> LootBoxNames = new Dictionary<uint, string> {
+            {0, "Base"},
+            {1, "Summer Games"},
+            {2, "Halloween"},
+            {3, "Winter"},
+            {4, "Lunar New Year"},
+            {5, "Archives"},
+            {6, "Anniversary"},
+            {7, "Golden"},
+            {8, "Internal"},
+            {9, "Legendary Anniversary"},
+            {10, "Hammond"}
+        };
     }
 
     [JsonObject(MemberSerialization.OptOut)]

@@ -15,7 +15,7 @@
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,9 +24,11 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>CS0108;CS0649;IDE0044;IDE1006</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\dist\Release\</OutputPath>
@@ -34,6 +36,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
@@ -43,9 +46,6 @@
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed">
       <HintPath>$(SolutionDir)\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
-    </Reference>
-    <Reference Include="OpenTK, Version=1.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4">
-      <HintPath>$(SolutionDir)\packages\OpenTK.1.1.2225.0\lib\net20\OpenTK.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -59,7 +59,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConvertLogic\LUT.cs" />
     <Compile Include="ConvertLogic\Sound.cs" />
+    <Compile Include="DataModels\Achievement.cs" />
+    <Compile Include="DataModels\GameMode.cs" />
     <Compile Include="DataModels\LootBox.cs" />
     <Compile Include="DataModels\PlayerProgression.cs" />
     <Compile Include="DataModels\Hero.cs" />
@@ -78,7 +81,7 @@
     <Compile Include="Helper\IO.cs" />
     <Compile Include="Helper\LinqExtensions.cs" />
     <Compile Include="Helper\Logger.cs" />
-    <Compile Include="Helper\StringHelper.cs" />
+    <Compile Include="Helper\IndentHelper.cs" />
     <Compile Include="Helper\STUHelper.cs" />
     <Compile Include="IQueryParser.cs" />
     <Compile Include="ITool.cs" />
@@ -88,9 +91,10 @@
     <Compile Include="SaveLogic\Entity.cs" />
     <Compile Include="SaveLogic\Map.cs" />
     <Compile Include="SaveLogic\Model.cs" />
+    <Compile Include="SaveLogic\ScratchDB.cs" />
     <Compile Include="SaveLogic\Unlock\AnimationItem.cs" />
-    <Compile Include="SaveLogic\Unlock\Portrait.cs" />
-    <Compile Include="SaveLogic\Unlock\Skin.cs" />
+    <Compile Include="SaveLogic\Unlock\PortraitFrame.cs" />
+    <Compile Include="SaveLogic\Unlock\SkinTheme.cs" />
     <Compile Include="SaveLogic\Unlock\SprayAndIcon.cs" />
     <Compile Include="SaveLogic\Unlock\VoiceLine.cs" />
     <Compile Include="ToolFlags.cs" />
@@ -103,11 +107,12 @@
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebug0EE.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugAnimNodes.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugMaterialData.cs" />
+    <Compile Include="ToolLogic\Extract\Debug\ExtractDebugMovies.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugNewEntities.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugPackageFinder.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugShaderHashes.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugSkins.cs" />
-    <Compile Include="ToolLogic\Extract\Debug\ExtractDebugSoundBank.cs" />
+    <Compile Include="ToolLogic\Extract\Debug\ExtractDebugSpecialHelper.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugType.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugVCCE.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugVoiceSet.cs" />
@@ -118,11 +123,11 @@
     <Compile Include="ToolLogic\Extract\ExtractGeneral.cs" />
     <Compile Include="ToolLogic\Extract\ExtractHeroVoice.cs" />
     <Compile Include="ToolLogic\Extract\ExtractLootbox.cs" />
+    <Compile Include="ToolLogic\Extract\ExtractMapEnvs.cs" />
     <Compile Include="ToolLogic\Extract\ExtractMaps.cs" />
     <Compile Include="ToolLogic\Extract\ExtractFlags.cs" />
     <Compile Include="ToolLogic\Extract\ExtractNPCs.cs" />
     <Compile Include="ToolLogic\List\Debug\ListDebugHeroSettings.cs" />
-    <Compile Include="ToolLogic\List\Debug\ListDebugUnlocks.cs" />
     <Compile Include="ToolLogic\List\ListAchievements.cs" />
     <Compile Include="ToolLogic\List\ListChatSettings.cs" />
     <Compile Include="ToolLogic\List\ListGameParams.cs" />
@@ -153,17 +158,9 @@
       <Project>{3b5d1227-f0f7-48e4-9ac0-757b87f8c64f}</Project>
       <Name>CMFLib</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OWLib\OWLib.csproj">
-      <Project>{353c0d05-c505-4df4-909e-624fd94a7d3b}</Project>
-      <Name>OWLib</Name>
-    </ProjectReference>
     <ProjectReference Include="..\revorbstd\RevorbStd.csproj">
       <Project>{c3130ece-02d9-4be6-9883-75351822e7de}</Project>
       <Name>RevorbStd</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\STULib\STULib.csproj">
-      <Project>{996012b0-3693-4642-ac44-5aa8865ee44a}</Project>
-      <Name>STULib</Name>
     </ProjectReference>
     <ProjectReference Include="..\TankLib\TankLib.csproj">
       <Project>{6c37d977-591c-48de-b25b-04c0847413d1}</Project>

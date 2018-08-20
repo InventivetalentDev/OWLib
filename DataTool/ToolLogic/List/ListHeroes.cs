@@ -9,6 +9,7 @@ using static DataTool.Helper.IO;
 using static DataTool.Program;
 using static DataTool.Helper.Logger;
 using static DataTool.Helper.STUHelper;
+using TankLib.Helpers;
 
 namespace DataTool.ToolLogic.List {
     [Tool("list-heroes", Description = "List heroes", TrackTypes = new ushort[] {0x75}, CustomFlags = typeof(ListFlags))]
@@ -33,7 +34,8 @@ namespace DataTool.ToolLogic.List {
                 if (hero.Value.Description != null)
                     Log($"{indentLevel + 1}Description: {hero.Value.Description}");
                 
-                Log($"{indentLevel + 1}Color: {hero.Value.GalleryColor.ToHex()}");
+                TankLib.Helpers.Logger.Log24Bit(ConsoleSwatch.ColorReset, null, false, null, $"{indentLevel + 1}Color: {hero.Value.GalleryColor.ToHex()} ");
+                TankLib.Helpers.Logger.Log24Bit(hero.Value.GalleryColor.ToForeground(), null, true, null, "██████");
 
                 if (hero.Value.Loadouts != null) {
 
@@ -52,7 +54,7 @@ namespace DataTool.ToolLogic.List {
             Dictionary<string, Hero> @return = new Dictionary<string, Hero>();
 
             foreach (ulong key in TrackedFiles[0x75]) {
-                STUHero hero = GetInstanceNew<STUHero>(key);
+                STUHero hero = GetInstance<STUHero>(key);
                 if (hero == null) continue;
 
                 string name = GetString(hero.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(key):X}";

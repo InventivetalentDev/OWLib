@@ -29,7 +29,7 @@ namespace TankView
         public RecentLocations RecentLocations { get; set; }
         public ProgressInfo ProgressInfo { get; set; }
         public CASCSettings CASCSettings { get; set; }
-        public GUIDCollection GUIDTree { get; set; }
+        public GUIDCollection GUIDTree { get; set; } = new GUIDCollection();
         public ProductLocations ProductAgent { get; set; }
 
         public static CASCConfig Config;
@@ -39,9 +39,10 @@ namespace TankView
         public bool IsReady {
             get {
                 return ready;
-            } set {
+            }
+            set {
                 ready = value;
-                if(value)
+                if (value)
                 {
                     ProgressSlave.ReportProgress(0, "Idle");
                 }
@@ -182,7 +183,8 @@ namespace TankView
 
             Config = null;
             CASC = null;
-            GUIDTree = null;
+            GUIDTree?.Dispose();
+            GUIDTree = new GUIDCollection();
             NotifyPropertyChanged(nameof(GUIDTree));
             GCSettings.LatencyMode = GCLatencyMode.Batch;
 
@@ -224,6 +226,7 @@ namespace TankView
 
         private void BuildTree()
         {
+            GUIDTree?.Dispose();
             GUIDTree = new GUIDCollection(Config, CASC, ProgressSlave);
             NotifyPropertyChanged(nameof(GUIDTree));
         }

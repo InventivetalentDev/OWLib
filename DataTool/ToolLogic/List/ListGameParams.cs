@@ -1,12 +1,10 @@
-﻿using System;
+﻿/*using System;
 using DataTool.Flag;
 using DataTool.Helper;
-using STULib.Types;
 using static DataTool.Helper.IO;
 using static DataTool.Program;
 using static DataTool.Helper.Logger;
 using static DataTool.Helper.STUHelper;
-
 
 namespace DataTool.ToolLogic.List {
     [Tool("list-game-params", Description = "List game paramaters", IsSensitive = true, TrackTypes = new ushort[] {0xC6}, CustomFlags = typeof(ListFlags))]
@@ -77,4 +75,4 @@ namespace DataTool.ToolLogic.List {
             }
         }
     }
-}
+}*/

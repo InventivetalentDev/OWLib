@@ -2,7 +2,6 @@
 using System.IO;
 using DataTool.FindLogic;
 using DataTool.Flag;
-using OWLib;
 using TankLib;
 using TankLib.STU.Types;
 using static DataTool.Helper.IO;
@@ -31,11 +30,10 @@ namespace DataTool.ToolLogic.Extract {
             const string folderName = "Abilities";
             
             foreach (ulong key in TrackedFiles[0x9E]) {
-                STULoadout loadout = GetInstanceNew<STULoadout>(key);
+                STULoadout loadout = GetInstance<STULoadout>(key);
                 if (loadout == null) continue;
                 
-                string name = GetValidFilename(GetString(loadout.m_9290B942).TrimEnd().Replace(".", "_")) ?? $"Unknown{GUID.Index(key):X}";
-                
+                string name = GetValidFilename(GetString(loadout.m_name)?.TrimEnd().Replace(".", "_")) ?? $"Unknown{teResourceGUID.Index(key):X}";
                 
                 Combo.ComboInfo info = new Combo.ComboInfo();
                 Combo.Find(info, loadout.m_texture);

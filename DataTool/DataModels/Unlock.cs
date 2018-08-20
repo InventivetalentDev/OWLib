@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DataTool.JSON;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using TankLib.STU;
 using TankLib.STU.Types;
 using TankLib.STU.Types.Enums;
@@ -29,6 +30,7 @@ namespace DataTool.DataModels {
 		/// Unlock rarity
 		/// </summary>
 		/// <see cref="STUUnlockRarity"/>
+		[JsonConverter(typeof(StringEnumConverter))]
 	    public STUUnlockRarity Rarity;
 		
 		/// <summary>
@@ -56,7 +58,7 @@ namespace DataTool.DataModels {
 	    }
 		
 		public Unlock(ulong guid) {
-			var unlock = GetInstanceNew<STUUnlock>(guid);
+			var unlock = GetInstance<STUUnlock>(guid);
 			if (unlock == null) return;
 			Init(unlock, guid);
 		}
@@ -74,7 +76,7 @@ namespace DataTool.DataModels {
 		}
 
 		public string GetName() {
-			return Name ?? GetFileName(GUID);
+			return Name?.Replace(".", "") ?? GetFileName(GUID);
 		}
 
 	    /// <summary>
@@ -92,7 +94,7 @@ namespace DataTool.DataModels {
 				return "Skin";
 			}
 			if (type == typeof(STUUnlock_AvatarPortrait)) {
-				return "PlayerIcon";
+				return "Icon";
 			}
 			if (type == typeof(STUUnlock_Emote)) {
 				return "Emote";
@@ -134,7 +136,7 @@ namespace DataTool.DataModels {
 		    if (guids == null) return null;
 		    List<Unlock> unlocks = new List<Unlock>();
 		    foreach (ulong guid in guids) {
-			    STUUnlock stu = GetInstanceNew<STUUnlock>(guid);
+			    STUUnlock stu = GetInstance<STUUnlock>(guid);
 			    if (stu == null) continue;
 			    Unlock unlock = new Unlock(stu, guid);
 			    unlocks.Add(unlock);
@@ -151,5 +153,71 @@ namespace DataTool.DataModels {
 		public static Unlock[] GetArray(teStructuredDataAssetRef<STUUnlock>[] unlocks) {
 			return GetArray(unlocks?.Select(x => (ulong) x));
 		}
+	}
+
+	public static class UnlockData {
+		//public static readonly ulong[] SummerGames2016 = new ulong[] {0, 1, 2, 3};
+		//public static readonly ulong[] SummerGames2017 = new ulong[] {0, 1, 2, 3};
+		public static readonly ulong[] SummerGames2018 = {
+			0x250000000001716,
+			0x250000000001A8B,
+			0x25000000000170B,
+			0x250000000001A88,
+			0x2500000000015F2,
+			0x250000000001A89,
+			0x250000000001A8A,
+			0x2500000000011AE,
+			0x2500000000016D2,
+			0x250000000001A86,
+			0x250000000001A87,
+			0x250000000001A5A,
+			0x250000000001ABE,
+			0x250000000001952,
+			0x250000000001A84,
+			0x250000000001A51,
+			0x2500000000011D7,
+			0x2500000000011B6,
+			0x250000000001ABF,
+			0x250000000001062,
+			0x250000000001A85,
+			0x250000000001ABB,
+			0x250000000001A3C,
+			0x250000000001A67,
+			0x250000000001A66,
+			0x250000000001ABD,
+			0x250000000001A58,
+			0x250000000001A64,
+			0x250000000001A6A,
+			0x250000000001A6D,
+			0x250000000001A3A,
+			0x250000000001AB3,
+			0x250000000001AB4,
+			0x250000000001A3B,
+			0x250000000001A6B,
+			0x250000000001A68,
+			0x250000000001AB1,
+			0x250000000001AB2,
+			0x250000000001A6C,
+			0x250000000001A69,
+			0x250000000001AAF,
+			0x250000000001AB0,
+			0x2500000000012A5,
+			0x250000000001A7E,
+			0x250000000001A81,
+			0x250000000001A77,
+			0x2500000000013A5,
+			0x250000000001A7B,
+			0x250000000001A7A,
+			0x2500000000013A6,
+			0x250000000001A7C,
+			0x250000000001A79,
+			0x250000000001A78,
+			0x250000000001A7F,
+			0x250000000001A82,
+			0x250000000001A80,
+			0x250000000001A7D,
+			0x250000000001A83,
+			0x250000000001A8C
+		};
 	}
 }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using DataTool.DataModels;
 using DataTool.Flag;
-using DataTool.ToolLogic.Extract;
 using TankLib.STU.Types;
 using static DataTool.Helper.IO;
 using static DataTool.Program;
@@ -39,7 +38,7 @@ namespace DataTool.ToolLogic.List {
 
                 if (heroPair.Value.LootBoxesUnlocks != null) {
                     foreach (LootBoxUnlocks lootBoxUnlocks in heroPair.Value.LootBoxesUnlocks) {
-                        string boxName = ExtractHeroUnlocks.GetLootBoxName(lootBoxUnlocks.LootBoxType);
+                        string boxName = LootBox.GetName(lootBoxUnlocks.LootBoxType);
                         
                         DisplayUnlocks(boxName, lootBoxUnlocks.Unlocks);
                     }
@@ -62,7 +61,7 @@ namespace DataTool.ToolLogic.List {
         public static Dictionary<string, ProgressionUnlocks> GetUnlocks() {
             Dictionary<string, ProgressionUnlocks> @return = new Dictionary<string, ProgressionUnlocks>();
             foreach (ulong key in TrackedFiles[0x75]) {
-                STUHero hero = GetInstanceNew<STUHero>(key);
+                STUHero hero = GetInstance<STUHero>(key);
                 if (hero == null) continue;
 
                 string name = GetString(hero.m_0EDCE350);

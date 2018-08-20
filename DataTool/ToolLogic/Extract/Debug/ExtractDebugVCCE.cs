@@ -1,10 +1,8 @@
-﻿using System;
+﻿/*using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using DataTool.Flag;
-using OWLib;
-using OWLib.Types.Chunk;
 using static DataTool.Program;
 using static DataTool.Helper.IO;
 
@@ -57,4 +55,4 @@ namespace DataTool.ToolLogic.Extract.Debug {
             }
         }
     }
-}
+}*/
