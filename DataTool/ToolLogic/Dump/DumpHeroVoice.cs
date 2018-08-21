@@ -72,8 +72,7 @@ namespace DataTool.ToolLogic.Dump {
                         foreach (Unlock unlock in defaultUnlocks.Unlocks)
                             ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo, ref soundList);
 
-                    foreach (var eventUnlocks in progression.LootBoxesUnlocks) 
-                    {
+                    foreach (var eventUnlocks in progression.LootBoxesUnlocks) {
                         if (eventUnlocks?.Unlocks == null) continue;
 
                         foreach (Unlock unlock in eventUnlocks.Unlocks)
@@ -93,11 +92,10 @@ namespace DataTool.ToolLogic.Dump {
             if (unlockSkinTheme.m_0B1BA7C1 != 0)
                 return;
 
-            SaveSkin(heroNameActual, unlockSkinTheme.m_skinTheme, hero, unlock.Name, baseComponent, baseInfo, ref soundList);
+            ProcessSkin(heroNameActual, unlockSkinTheme.m_skinTheme, hero, unlock.Name, baseComponent, baseInfo, ref soundList);
         }
         
-        public static void SaveSkin(string heroNameActual, ulong skinResource, STUHero hero, string name, STUVoiceSetComponent baseComponent, Combo.ComboInfo baseInfo, ref List<SoundInfo> soundList)
-        {
+        public static void ProcessSkin(string heroNameActual, ulong skinResource, STUHero hero, string name, STUVoiceSetComponent baseComponent, Combo.ComboInfo baseInfo, ref List<SoundInfo> soundList) {
             STUSkinTheme skin = GetInstance<STUSkinTheme>(skinResource);
             if (skin == null)
                 return;
@@ -108,9 +106,7 @@ namespace DataTool.ToolLogic.Dump {
             ProcessSounds(heroNameActual, hero.m_gameplayEntity, name, ref component, ref info, ref soundList, baseComponent, baseInfo, SkinTheme.GetReplacements(skin));
         }        
 
-        public static bool ProcessSounds(string heroNameActual, ulong entityMain, string skin, ref STUVoiceSetComponent voiceSetComponent,
-            ref Combo.ComboInfo info, ref List<SoundInfo> soundList, STUVoiceSetComponent baseComponent = null, Combo.ComboInfo baseCombo = null,
-            Dictionary<ulong, ulong> replacements = null) {
+        public static bool ProcessSounds(string heroNameActual, ulong entityMain, string skin, ref STUVoiceSetComponent voiceSetComponent, ref Combo.ComboInfo info, ref List<SoundInfo> soundList, STUVoiceSetComponent baseComponent = null, Combo.ComboInfo baseCombo = null, Dictionary<ulong, ulong> replacements = null) {
             voiceSetComponent = GetInstance<STUVoiceSetComponent>(Combo.GetReplacement(entityMain, replacements));
 
             if (voiceSetComponent?.m_voiceDefinition == null)
@@ -143,11 +139,11 @@ namespace DataTool.ToolLogic.Dump {
                         }
                     }
 
-                    foreach (var sound in voiceLineInstance.SoundFiles) {
+                    foreach (var sound in voiceLineInstance.SoundFiles)
                         soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin));
-                    }
                 }
             }
+
             return true;
         }
     }
