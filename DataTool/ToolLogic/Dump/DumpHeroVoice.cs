@@ -46,24 +46,24 @@ namespace DataTool.ToolLogic.Dump {
             List<SoundInfo> soundList = new List<SoundInfo>();
             
             foreach (ulong heroGuid in TrackedFiles[0x75]) {
-                STUHero hero = GetInstanceNew<STUHero>(heroGuid);
+                STUHero hero = GetInstance<STUHero>(heroGuid);
                 if (hero == null) continue;
                 
                 string heroNameActual = (GetString(hero.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroGuid)}").TrimEnd(' ');
                 
-                STUVoiceSetComponent voiceSetComponent = GetInstanceNew<STUVoiceSetComponent>(hero.m_gameplayEntity);
+                STUVoiceSetComponent voiceSetComponent = GetInstance<STUVoiceSetComponent>(hero.m_gameplayEntity);
 
                 if (voiceSetComponent?.m_voiceDefinition == null) continue;
                 
                 Combo.ComboInfo info = new Combo.ComboInfo();
                 Combo.Find(info, voiceSetComponent.m_voiceDefinition);
                 
-                VoiceSet voiceSet = new VoiceSet(GetInstanceNew<STUVoiceSet>(voiceSetComponent.m_voiceDefinition));
+                VoiceSet voiceSet = new VoiceSet(GetInstance<STUVoiceSet>(voiceSetComponent.m_voiceDefinition));
                 Combo.VoiceSetInfo voiceSetInfo = info.VoiceSets[voiceSetComponent.m_voiceDefinition];
               
                 foreach (var voicelineInstanceInfo in voiceSetInfo.VoiceLineInstances) {
                     foreach (var voiceLineInstance in voicelineInstanceInfo.Value) {
-                        var subtitleInfo = GetInstanceNew<STU_7A68A730>(voiceLineInstance.Subtitle);
+                        var subtitleInfo = GetInstance<STU_7A68A730>(voiceLineInstance.Subtitle);
                         var subtitle = subtitleInfo?.m_798027DE.m_text;
                         ulong conversationGuid = 0;
                         int? conversationPosition = null;
@@ -72,7 +72,7 @@ namespace DataTool.ToolLogic.Dump {
                            var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx09B];
 
                             if (vl.VoiceConversation != 0) {
-                                var convo = GetInstanceNew<STUVoiceConversation>(vl.VoiceConversation);
+                                var convo = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
                                 conversationPosition = convo.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx09B);
                                 conversationGuid = vl.VoiceConversation;
                             }
