@@ -10,6 +10,7 @@ using DataTool.SaveLogic.Unlock;
 using static DataTool.Program;
 using static DataTool.Helper.STUHelper;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using TankLib;
 using TankLib.STU.Types;
 using TankLib.STU.Types.Enums;
@@ -32,12 +33,12 @@ namespace DataTool.ToolLogic.Dump {
         }
 
         public class CelebCond : BaseCondition {
-            public string GuessedType = "Celebration";
+            public string GuessedType = "CelebrationCond";
             public string Celebration;
         }
 
         public class MapCond : BaseCondition {
-            public string GuessedType = "MapSpecific";
+            public string GuessedType = "MapCond";
             public string Map;
         }
 
@@ -45,17 +46,25 @@ namespace DataTool.ToolLogic.Dump {
             public string GuessedType = "HeroCond";
             public string Hero;
         }
+        
+        public class TeamCond : BaseCondition {
+            public string GuessedType = "TeamCond";
+            [JsonConverter(typeof(StringEnumConverter))]
+            public TeamIndex Team;
+        }
+
+        public class EnemiesCond : BaseCondition {
+            public string GuessedType = "EnemiesCond";
+            public string Virtual01C;
+            public ulong Key;
+        }
 
         public class CondDetails {
             public uint m_amount;
             public int m_07D0F7AA;
+            [JsonConverter(typeof(StringEnumConverter))]
             public Enum_AB6CE3D1 m_967A138B;
             public ulong m_A20DCD80;
-        }
-
-        public class TeamCond : BaseCondition {
-            public string GuessedType = "TeamCond";
-            public TeamIndex Team;
         }
 
         public class SoundInfo {
@@ -200,11 +209,9 @@ namespace DataTool.ToolLogic.Dump {
                                 var subCond = cond2.m_4FF98D41;
 
                                 switch (subCond) {
-                                    // Map Specific?? 
                                     case STU_E9DB72FF mapCond:
                                         conditions.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
                                         break;
-                                    // interaction of some sort
                                     case STU_D815520F heroCond:
                                         var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
                                         var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
@@ -213,9 +220,17 @@ namespace DataTool.ToolLogic.Dump {
                                     case STU_C37857A5 celebCond:
                                         conditions.Add(new CelebCond{ m_type = celebCond.m_type, Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType)});
                                         break;
-                                    // Dunno
+                                    case STU_D0364821 enemyCond:
+                                        conditions.Add(new EnemiesCond {
+                                            m_type = enemyCond.m_type,
+                                            Virtual01C = $"{teResourceGUID.LongKey(enemyCond.m_identifier):X12}",
+                                            Key = enemyCond.m_identifier.GUID
+                                        });
+                                        break;
+                                    case STU_BDD783B9 teamCond:
+                                        conditions.Add(new TeamCond{ m_type = teamCond.m_type, Team = teamCond.m_team });
+                                        break;
                                     case STU_7C69EA0F thiccCond:
-                                        //Debugger.Break();
                                         conditionDetails = new CondDetails {
                                             m_amount = thiccCond.m_amount,
                                             m_07D0F7AA = thiccCond.m_07D0F7AA,
@@ -240,12 +255,6 @@ namespace DataTool.ToolLogic.Dump {
                                                 }
                                             }
                                         }
-                                        break;
-                                    case STU_D0364821 noclue:
-                                        // 0000000385450.0B2 - Reaper - "Enemies below us" - 6
-                                        break;
-                                    case STU_BDD783B9 stillnoclue:
-                                        conditions.Add(new BaseCondition{m_type = stillnoclue.m_type, GuessedType = "Still No Idea"});
                                         break;
                                     default:
                                         //var file = $"{teResourceGUID.LongKey(vl.VoiceSounds[0]):X12}";
