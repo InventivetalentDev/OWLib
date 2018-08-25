@@ -129,12 +129,12 @@ namespace DataTool.ToolLogic.Dump {
                     ulong conversationGuid = 0;
                     int? conversationPosition = null;
 
-                    if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx09B)) {
-                        var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx09B];
+                    if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
+                        var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
 
                         if (vl.VoiceConversation != 0) {
                             var convo = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
-                            conversationPosition = convo.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx09B);
+                            conversationPosition = convo.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx06F);
                             conversationGuid = vl.VoiceConversation;
                         }
                     }
