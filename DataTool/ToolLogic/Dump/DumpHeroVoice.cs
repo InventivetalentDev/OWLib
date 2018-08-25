@@ -46,7 +46,7 @@ namespace DataTool.ToolLogic.Dump {
             public string Hero;
         }
 
-        public class CondDetails : BaseCondition {
+        public class CondDetails {
             public uint m_amount;
             public int m_07D0F7AA;
             public Enum_AB6CE3D1 m_967A138B;
@@ -66,7 +66,7 @@ namespace DataTool.ToolLogic.Dump {
             public int? ConvoPos;
             public string Subtitle;
             public string[] Skins;
-            public CondDetails ConditionDetails;
+            public CondDetails CondDetails;
             public List<BaseCondition> Conditions;
 
             [JsonIgnore]
@@ -76,10 +76,10 @@ namespace DataTool.ToolLogic.Dump {
             public bool ShouldSerializeConvoPos() => ConvoPos != null;
             public bool ShouldSerializeSubtitle() => Subtitle != null;
             public bool ShouldSerializeSkins() => Skins != null;
-            public bool ShouldSerializeConditionDetails() => ConditionDetails != null;
+            public bool ShouldSerializeCondDetails() => CondDetails != null;
             public bool ShouldSerializeConditions() => Conditions.Any();
 
-            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, List<BaseCondition> otherStuff, CondDetails conditionDetails) {
+            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, List<BaseCondition> conditions, CondDetails condDetails) {
                 GUID = guid;
                 HeroName = heroName;
                 SoundFile = $"{teResourceGUID.LongKey(guid):X12}";
@@ -88,8 +88,8 @@ namespace DataTool.ToolLogic.Dump {
                 ConvoPos = convoPosition;
                 Subtitle = subtitle;
                 Skins = skin != null ? new []{skin} : null;
-                Conditions = otherStuff;
-                ConditionDetails = conditionDetails;
+                Conditions = conditions;
+                CondDetails = condDetails;
             }
         }
         
@@ -217,7 +217,6 @@ namespace DataTool.ToolLogic.Dump {
                                     case STU_7C69EA0F thiccCond:
                                         //Debugger.Break();
                                         conditionDetails = new CondDetails {
-                                            m_type = thiccCond.m_type,
                                             m_amount = thiccCond.m_amount,
                                             m_07D0F7AA = thiccCond.m_07D0F7AA,
                                             m_967A138B = thiccCond.m_967A138B,
