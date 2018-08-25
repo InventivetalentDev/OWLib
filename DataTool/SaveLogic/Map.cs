@@ -8,6 +8,8 @@ using static DataTool.Helper.IO;
 using static DataTool.Helper.STUHelper;
 using static DataTool.Helper.Logger;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DataTool.SaveLogic {
     public static class Map {
@@ -26,24 +28,28 @@ namespace DataTool.SaveLogic {
             public teMapPlaceableData Models;
             public teMapPlaceableData Entities;
             public teMapPlaceableData Lights;
-            
+            public teMapPlaceableData Sounds;
+            public teMapPlaceableData Effects;
+
             public OverwatchMap(string name, FindLogic.Combo.ComboInfo info, teMapPlaceableData singleModels,
-                teMapPlaceableData modelGroups, teMapPlaceableData placeable8, teMapPlaceableData entities,
-                teMapPlaceableData lights) {
+                teMapPlaceableData modelGroups, teMapPlaceableData models, teMapPlaceableData entities,
+                teMapPlaceableData lights, teMapPlaceableData sounds, teMapPlaceableData effects) {
                 Name = name;
                 Info = info;
 
                 SingleModels = singleModels;
                 ModelGroups = modelGroups;
-                Models = placeable8;
+                Models = models;
                 Entities = entities;
                 Lights = lights;
+                Sounds = sounds;
+                Effects = effects;
             }
 
             public void Write(Stream output) {
                 using (BinaryWriter writer = new BinaryWriter(output)) {
                     writer.Write((ushort) 1); // version major
-                    writer.Write((ushort) 1); // version minor
+                    writer.Write((ushort) 2); // version minor
 
                     if (Name.Length == 0) {
                         writer.Write((byte) 0);
@@ -54,15 +60,18 @@ namespace DataTool.SaveLogic {
                     writer.Write(ModelGroups.Header.PlaceableCount); // nr objects
 
                     int entitiesWithModelCount = 0;
-                    STUModelComponent[] modelComponents = new STUModelComponent[Entities.Header.PlaceableCount];
+                    STUModelComponent[][] modelComponentSets = new STUModelComponent[Entities.Header.PlaceableCount][];
 
                     for (int i = 0; i < Entities.Header.PlaceableCount; i++) {
                         teMapPlaceableEntity entity = (teMapPlaceableEntity) Entities.Placeables[i];
-                        STUModelComponent component = GetInstance<STUModelComponent>(entity.Header.EntityDefinition);
-                        if (component != null && teResourceGUID.Index(component.m_model) > 1 && teResourceGUID.Index(component.m_look) > 1) {
-                            entitiesWithModelCount++;
-                            modelComponents[i] = component;
+                        var components = GetInstances<STUModelComponent>(entity.Header.EntityDefinition).Where(component => teResourceGUID.Index(component.m_model) > 1);
+                        if(components.Count() == 0)
+                        {
+                            continue;
                         }
+                        modelComponentSets[i] = new STUModelComponent[components.Count()];
+                        entitiesWithModelCount += modelComponentSets[i].Length;
+                        modelComponentSets[i] = components.ToArray();
                     }
 
                     writer.Write((uint)(SingleModels.Header.PlaceableCount + Models.Header.PlaceableCount +
@@ -99,7 +108,7 @@ namespace DataTool.SaveLogic {
 
                     foreach (IMapPlaceable mapPlaceable in SingleModels.Placeables ?? Array.Empty<IMapPlaceable>()) {
                         teMapPlaceableSingleModel singleModel = (teMapPlaceableSingleModel) mapPlaceable;
-
+                        
                         FindLogic.Combo.Find(Info, singleModel.Header.Model);
                         FindLogic.Combo.Find(Info, singleModel.Header.ModelLook, null,
                             new FindLogic.Combo.ComboContext {Model = singleModel.Header.Model});
@@ -119,7 +128,7 @@ namespace DataTool.SaveLogic {
 
                     foreach (IMapPlaceable mapPlaceable in Models.Placeables ?? Array.Empty<IMapPlaceable>()) {
                         teMapPlaceableModel placeableModel = (teMapPlaceableModel) mapPlaceable;
-
+                        
                         FindLogic.Combo.Find(Info, placeableModel.Header.Model);
                         FindLogic.Combo.Find(Info, placeableModel.Header.ModelLook, null,
                             new FindLogic.Combo.ComboContext {Model = placeableModel.Header.Model});
@@ -141,32 +150,42 @@ namespace DataTool.SaveLogic {
                     for (int i = 0; i < Entities.Placeables?.Length; i++) {
                         var entity = (teMapPlaceableEntity) Entities.Placeables[i];
                         
-                        STUModelComponent modelComponent = modelComponents[i];
-                        if (modelComponent == null) continue;
+                        STUModelComponent[] modelComponents = modelComponentSets[i];
+                        if (modelComponents == null) continue;
 
-                        ulong model = modelComponent.m_model;
-                        ulong modelLook = modelComponent.m_look;
+                        FindLogic.Combo.Find(Info, entity.Header.EntityDefinition);
 
-                        foreach (STUComponentInstanceData instanceData in entity.InstanceData) {
-                            if (!(instanceData is STUModelComponentInstanceData modelComponentInstanceData)) continue;
-                            if (modelComponentInstanceData.m_look != 0) {
-                                modelLook = modelComponentInstanceData.m_look;
+                        foreach (var modelComponent in modelComponents) {
+                            ulong model = modelComponent.m_model;
+                            var modelLookSet = new List<ulong> { modelComponent.m_look };
+
+                            foreach (STUComponentInstanceData instanceData in entity.InstanceData) {
+                                if (!(instanceData is STUModelComponentInstanceData modelComponentInstanceData)) continue;
+                                if (modelComponentInstanceData.m_look != 0) {
+                                    modelLookSet.Add(modelComponentInstanceData.m_look);
+                                }
                             }
+
+                            FindLogic.Combo.Find(Info, model);
+                            foreach (var modelLook in modelLookSet) {
+                                FindLogic.Combo.Find(Info, modelLook, null, new FindLogic.Combo.ComboContext { Model = model });
+                            }
+
+                            FindLogic.Combo.ModelInfoNew modelInfo = Info.Models[model];
+                            string modelFn = $"Models\\{modelInfo.GetName()}\\{modelInfo.GetNameIndex()}.owmdl";
+                            string matFn = "SnapeKilledDumbledore";
+                            try {
+                                FindLogic.Combo.ModelLookInfo modelLookInfo = Info.ModelLooks[modelLookSet.First(x => x > 0)];
+                                matFn = $"Models\\{modelInfo.GetName()}\\ModelLooks\\{modelLookInfo.GetNameIndex()}.owmat";
+                            }
+                            catch { }
+
+                            writer.Write(modelFn);
+                            writer.Write(matFn);
+                            writer.Write(entity.Header.Translation);
+                            writer.Write(entity.Header.Scale);
+                            writer.Write(entity.Header.Rotation);
                         }
-                        
-                        FindLogic.Combo.Find(Info, model);
-                        FindLogic.Combo.Find(Info, modelLook, null, new FindLogic.Combo.ComboContext {Model = model});
-
-                        FindLogic.Combo.ModelInfoNew modelInfo = Info.Models[model];
-                        FindLogic.Combo.ModelLookInfo modelLookInfo = Info.ModelLooks[modelLook];
-                        string modelFn = $"Models\\{modelInfo.GetName()}\\{modelInfo.GetNameIndex()}.owmdl";
-                        string matFn = $"Models\\{modelInfo.GetName()}\\ModelLooks\\{modelLookInfo.GetNameIndex()}.owmat";
-
-                        writer.Write(modelFn);
-                        writer.Write(matFn);
-                        writer.Write(entity.Header.Translation);
-                        writer.Write(entity.Header.Scale);
-                        writer.Write(entity.Header.Rotation);
                     }
 
                     // Extension 1.1 - Lights
@@ -204,6 +223,29 @@ namespace DataTool.SaveLogic {
                         writer.Write(light.Header.Unknown7A);
                         writer.Write(light.Header.Unknown7B);
                     }
+
+                    writer.Write(Sounds.Header.PlaceableCount); // nr Sounds
+
+                    // Extension 1.2 - Sounds
+                    foreach (IMapPlaceable mapPlaceable in Sounds.Placeables ?? Array.Empty<IMapPlaceable>()) {
+                        var sound = (teMapPlaceableSound)mapPlaceable;
+                        FindLogic.Combo.Find(Info, sound.Header.Sound);
+                        writer.Write(sound.Header.Translation);
+                        if(!Info.Sounds.ContainsKey(sound.Header.Sound) || Info.Sounds[sound.Header.Sound].SoundFiles == null) {
+                            writer.Write(0);
+                            continue;
+                        }
+                        writer.Write(Info.Sounds[sound.Header.Sound].SoundFiles.Count);
+                        foreach(var soundfile in Info.Sounds[sound.Header.Sound].SoundFiles?.Values)
+                        {
+                            writer.Write($@"Sounds\{Info.SoundFiles[soundfile].GetName()}.ogg");
+                        }
+                    }
+
+                    // Extension 1.3 - Effects
+                    foreach (IMapPlaceable mapPlaceable in Effects.Placeables ?? Array.Empty<IMapPlaceable>())
+                    {
+                    }
                 }
             }
         }
@@ -211,7 +253,6 @@ namespace DataTool.SaveLogic {
         public static void Save(ICLIFlags flags, STUMapHeader mapHeader, ulong key, string basePath) {
             string name = GetString(mapHeader.m_displayName) ?? "Title Screen";
             //string name = map.m_506FA8D8;
-
             var variantName = GetString(mapHeader.m_1C706502);
             if (variantName != null) name = variantName;
 
@@ -238,11 +279,13 @@ namespace DataTool.SaveLogic {
 
             teMapPlaceableData placeableModelGroups = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.MODEL_GROUP);
             teMapPlaceableData placeableSingleModels = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.SINGLE_MODEL);
-            teMapPlaceableData placeable8 = GetPlaceableData(mapHeader, 8);
+            teMapPlaceableData placeableModel = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.MODEL);
             teMapPlaceableData placeableLights = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.LIGHT);
             teMapPlaceableData placeableEntities = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.ENTITY);
-            
-            OverwatchMap exportMap = new OverwatchMap(name, info, placeableSingleModels, placeableModelGroups, placeable8, placeableEntities, placeableLights);
+            teMapPlaceableData placeableSounds = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.SOUND);
+            teMapPlaceableData placeableEffects = GetPlaceableData(mapHeader, Enums.teMAP_PLACEABLE_TYPE.EFFECT);
+
+            OverwatchMap exportMap = new OverwatchMap(name, info, placeableSingleModels, placeableModelGroups, placeableModel, placeableEntities, placeableLights, placeableSounds, placeableEffects);
             using (Stream outputStream = File.OpenWrite(Path.Combine(mapPath, $"{name}.{exportMap.Extension}"))) {
                 exportMap.Write(outputStream);
             }
@@ -301,8 +344,9 @@ namespace DataTool.SaveLogic {
             if (announcerVoiceSet != 0) {  // whole thing in env mode, not here
                 info.VoiceSets.Remove(announcerVoiceSet);
             }
-            Combo.SaveAllVoiceSets(flags, Path.Combine(mapPath, "Sound"), info);
-            
+            Combo.SaveAllVoiceSets(flags, Path.Combine(mapPath, "VoiceSets"), info);
+            Combo.SaveAllSoundFiles(flags, Path.Combine(mapPath, "Sound"), info);
+
             LoudLog("\tDone");
         }
 
