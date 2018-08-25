@@ -15,13 +15,13 @@ namespace TankLib.STU.Types {
             return celeb ?? $"UNKNOWN CELEBRATION? {teResourceGUID.AsString(key)}";
         }
 
-public static readonly Dictionary<ulong, string> CelebrationMapping = new Dictionary<ulong, string> {
-    {0xD80000000002498, "Lunar New Year"},
-    {0xD80000000002497, "New Years Resolution"},
-    {0xD80000000002168, "Christmas"},
-    {0xD8000000000212E, "Halloween"},
-    {0xD800000000024A6, "Valentines Day"},
-    {0xD80000000002658, "St. Patricks Day"}
-};
+        public static readonly Dictionary<ulong, string> CelebrationMapping = new Dictionary<ulong, string> {
+            {0xD80000000002498, "Lunar New Year"},
+            {0xD80000000002497, "New Years Resolution"},
+            {0xD80000000002168, "Christmas"},
+            {0xD8000000000212E, "Halloween"},
+            {0xD800000000024A6, "Valentines Day"},
+            {0xD80000000002658, "St. Patricks Day"}
+        };
     }
 }
