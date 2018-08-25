@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using DataTool.DataModels;
 using DataTool.Flag;
+using DataTool.SaveLogic;
 using DataTool.SaveLogic.Unlock;
 using static DataTool.Program;
 using static DataTool.Helper.STUHelper;
@@ -29,12 +31,13 @@ namespace DataTool.ToolLogic.Dump {
             public string ConvoSet;
             public int? ConvoPos;
             public string Subtitle;
+            public string Map;
             public string[] Skins;
 
             [JsonIgnore]
             public ulong GUID;
 
-            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin) {
+            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, string map) {
                 GUID = guid;
                 HeroName = heroName;
                 SoundFile = $"{teResourceGUID.LongKey(guid):X12}";
@@ -43,11 +46,21 @@ namespace DataTool.ToolLogic.Dump {
                 ConvoPos = convoPosition;
                 Subtitle = subtitle;
                 Skins = skin != null ? new []{skin} : null;
+                Map = map;
             }
         }
+        
+        private static readonly Dictionary<uint, string> MapNames = new Dictionary<uint, string>();
 
         public void Parse(ICLIFlags toolFlags) {
             List<SoundInfo> soundList = new List<SoundInfo>();
+            
+            foreach (ulong mapGuid in TrackedFiles[0x9F]) {
+                STUMapHeader mapHeader = GetInstance<STUMapHeader>(mapGuid);
+                if (mapHeader == null) continue;
+                
+                MapNames[teResourceGUID.Index(mapGuid)] = GetString(mapHeader.m_1C706502) ?? GetString(mapHeader.m_displayName);
+            }
             
             foreach (ulong heroGuid in TrackedFiles[0x75]) {
                 STUHero hero = GetInstance<STUHero>(heroGuid);
@@ -128,9 +141,27 @@ namespace DataTool.ToolLogic.Dump {
                     var subtitle = subtitleInfo?.m_798027DE.m_text;
                     ulong conversationGuid = 0;
                     int? conversationPosition = null;
+                    string map = null;
 
                     if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
                         var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
+                        
+                        if (vl.STU.m_voiceLineRuntime.m_4FF98D41 != null) {
+                            var cond = vl.STU.m_voiceLineRuntime.m_4FF98D41;
+                            
+                            if (cond is STU_32A19631 cond2) {
+                                var subCond = cond2.m_4FF98D41;
+                                
+                                if (subCond is STU_E9DB72FF mapCond) {
+                                    map = MapNames[teResourceGUID.Index(mapCond.m_map)];
+                                }
+                                else {
+                                    //Debugger.Break();
+                                }
+                            } else {
+                                //Debugger.Break();
+                            }
+                        }
 
                         if (vl.VoiceConversation != 0) {
                             var convo = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
@@ -140,7 +171,7 @@ namespace DataTool.ToolLogic.Dump {
                     }
 
                     foreach (var sound in voiceLineInstance.SoundFiles)
-                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin));
+                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin, map));
                 }
             }
 
