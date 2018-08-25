@@ -26,16 +26,36 @@ namespace DataTool.ToolLogic.Dump {
             throw new NotImplementedException();
         }
 
-        public class ConditionalCrap {
+        public class BaseCondition {
             public Enum_1AA009C2 m_type;
             public string GuessedType;
-            public string Data;
+        }
 
-            public ConditionalCrap(Enum_1AA009C2 type, string otherType, string data) {
-                m_type = type;
-                GuessedType = otherType;
-                Data = data;
-            }
+        public class CelebCond : BaseCondition {
+            public string GuessedType = "Celebration";
+            public string Celebration;
+        }
+
+        public class MapCond : BaseCondition {
+            public string GuessedType = "MapSpecific";
+            public string Map;
+        }
+
+        public class HeroCond : BaseCondition {
+            public string GuessedType = "HeroCond";
+            public string Hero;
+        }
+
+        public class CondDetails : BaseCondition {
+            public uint m_amount;
+            public int m_07D0F7AA;
+            public Enum_AB6CE3D1 m_967A138B;
+            public ulong m_A20DCD80;
+        }
+
+        public class TeamCond : BaseCondition {
+            public string GuessedType = "TeamCond";
+            public TeamIndex Team;
         }
 
         public class SoundInfo {
@@ -46,7 +66,8 @@ namespace DataTool.ToolLogic.Dump {
             public int? ConvoPos;
             public string Subtitle;
             public string[] Skins;
-            public List<ConditionalCrap> OtherStuff;
+            public CondDetails ConditionDetails;
+            public List<BaseCondition> Conditions;
 
             [JsonIgnore]
             public ulong GUID;
@@ -55,9 +76,10 @@ namespace DataTool.ToolLogic.Dump {
             public bool ShouldSerializeConvoPos() => ConvoPos != null;
             public bool ShouldSerializeSubtitle() => Subtitle != null;
             public bool ShouldSerializeSkins() => Skins != null;
-            public bool ShouldSerializeOtherStuff() => OtherStuff.Any();
+            public bool ShouldSerializeConditionDetails() => ConditionDetails != null;
+            public bool ShouldSerializeConditions() => Conditions.Any();
 
-            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, List<ConditionalCrap> otherStuff) {
+            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, List<BaseCondition> otherStuff, CondDetails conditionDetails) {
                 GUID = guid;
                 HeroName = heroName;
                 SoundFile = $"{teResourceGUID.LongKey(guid):X12}";
@@ -66,7 +88,8 @@ namespace DataTool.ToolLogic.Dump {
                 ConvoPos = convoPosition;
                 Subtitle = subtitle;
                 Skins = skin != null ? new []{skin} : null;
-                OtherStuff = otherStuff;
+                Conditions = otherStuff;
+                ConditionDetails = conditionDetails;
             }
         }
         
@@ -162,7 +185,8 @@ namespace DataTool.ToolLogic.Dump {
                     ulong conversationGuid = 0;
                     int? conversationPosition = null;
 
-                    var otherStuff = new List<ConditionalCrap>();
+                    var conditions = new List<BaseCondition>();
+                    CondDetails conditionDetails = null;
                     
                     //string file = $"{teResourceGUID.LongKey(voiceLineInstance.SoundFiles[0]):X12}";
 
@@ -178,27 +202,51 @@ namespace DataTool.ToolLogic.Dump {
                                 switch (subCond) {
                                     // Map Specific?? 
                                     case STU_E9DB72FF mapCond:
-                                        var mapName = MapNames[teResourceGUID.Index(mapCond.m_map)];
-                                        otherStuff.Add(new ConditionalCrap(mapCond.m_type, "MapSpecific", mapName));
+                                        conditions.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
                                         break;
                                     // interaction of some sort
                                     case STU_D815520F heroCond:
                                         var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
                                         var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                                        otherStuff.Add(new ConditionalCrap(heroCond.m_type, "Interaction", name));
+                                        conditions.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = name});
+                                        break;
+                                    case STU_C37857A5 celebCond:
+                                        conditions.Add(new CelebCond{ m_type = celebCond.m_type, Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType)});
                                         break;
                                     // Dunno
+                                    case STU_7C69EA0F thiccCond:
+                                        //Debugger.Break();
+                                        conditionDetails = new CondDetails {
+                                            m_type = thiccCond.m_type,
+                                            m_amount = thiccCond.m_amount,
+                                            m_07D0F7AA = thiccCond.m_07D0F7AA,
+                                            m_967A138B = thiccCond.m_967A138B,
+                                            m_A20DCD80 = thiccCond.m_A20DCD80
+                                        };
+
+                                        if (thiccCond.m_4FF98D41 != null) {
+                                            foreach (STU_32A19631 condition in thiccCond.m_4FF98D41) {
+                                                switch (condition.m_4FF98D41) {
+                                                    case STU_E9DB72FF mapCond:
+                                                        conditions.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)] });
+                                                        break;
+                                                    case STU_BDD783B9 teamCond:
+                                                        conditions.Add(new TeamCond{ m_type = teamCond.m_type, Team = teamCond.m_team });
+                                                        break;
+                                                    case STU_D815520F heroCond:
+                                                        var h = GetInstance<STUHero>(heroCond.m_8C8C5285);
+                                                        var hName = (GetString(h?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
+                                                        conditions.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = hName});
+                                                        break;
+                                                }
+                                            }
+                                        }
+                                        break;
                                     case STU_D0364821 noclue:
                                         // 0000000385450.0B2 - Reaper - "Enemies below us" - 6
                                         break;
-                                    case STU_7C69EA0F lessclue:
-                                        otherStuff.Add(new ConditionalCrap(lessclue.m_type, "Less Clue", null));
-                                        break;
-                                    case STU_C37857A5 celebCond:
-                                        otherStuff.Add(new ConditionalCrap(celebCond.m_type, "Celebration", celebCond.GetCelebrationType(celebCond.m_celebrationType)));
-                                        break;
                                     case STU_BDD783B9 stillnoclue:
-                                        otherStuff.Add(new ConditionalCrap(stillnoclue.m_type, "Still No Clue", null));
+                                        conditions.Add(new BaseCondition{m_type = stillnoclue.m_type, GuessedType = "Still No Idea"});
                                         break;
                                     default:
                                         //var file = $"{teResourceGUID.LongKey(vl.VoiceSounds[0]):X12}";
@@ -218,7 +266,7 @@ namespace DataTool.ToolLogic.Dump {
                     }
 
                     foreach (var sound in voiceLineInstance.SoundFiles)
-                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin, otherStuff));
+                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin, conditions, conditionDetails));
                 }
             }
 
