@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using DataTool.DataModels;
 using DataTool.Flag;
+using DataTool.JSON;
 using DataTool.SaveLogic;
 using DataTool.SaveLogic.Unlock;
 using static DataTool.Program;
@@ -11,6 +12,7 @@ using static DataTool.Helper.STUHelper;
 using Newtonsoft.Json;
 using TankLib;
 using TankLib.STU.Types;
+using TankLib.STU.Types.Enums;
 using Combo = DataTool.FindLogic.Combo;
 using static DataTool.Helper.IO;
 using STUHero = TankLib.STU.Types.STUHero;
@@ -24,6 +26,18 @@ namespace DataTool.ToolLogic.Dump {
             throw new NotImplementedException();
         }
 
+        public class ConditionalCrap {
+            public Enum_1AA009C2 m_type;
+            public string GuessedType;
+            public string Data;
+
+            public ConditionalCrap(Enum_1AA009C2 type, string otherType, string data) {
+                m_type = type;
+                GuessedType = otherType;
+                Data = data;
+            }
+        }
+
         public class SoundInfo {
             public string HeroName;
             public string SoundFile;
@@ -31,13 +45,19 @@ namespace DataTool.ToolLogic.Dump {
             public string ConvoSet;
             public int? ConvoPos;
             public string Subtitle;
-            public string Map;
             public string[] Skins;
+            public List<ConditionalCrap> OtherStuff;
 
             [JsonIgnore]
             public ulong GUID;
 
-            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, string map) {
+            public bool ShouldSerializeConvoSet() => !string.IsNullOrEmpty(ConvoSet);
+            public bool ShouldSerializeConvoPos() => ConvoPos != null;
+            public bool ShouldSerializeSubtitle() => Subtitle != null;
+            public bool ShouldSerializeSkins() => Skins != null;
+            public bool ShouldSerializeOtherStuff() => OtherStuff.Any();
+
+            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, List<ConditionalCrap> otherStuff) {
                 GUID = guid;
                 HeroName = heroName;
                 SoundFile = $"{teResourceGUID.LongKey(guid):X12}";
@@ -46,7 +66,7 @@ namespace DataTool.ToolLogic.Dump {
                 ConvoPos = convoPosition;
                 Subtitle = subtitle;
                 Skins = skin != null ? new []{skin} : null;
-                Map = map;
+                OtherStuff = otherStuff;
             }
         }
         
@@ -141,7 +161,10 @@ namespace DataTool.ToolLogic.Dump {
                     var subtitle = subtitleInfo?.m_798027DE.m_text;
                     ulong conversationGuid = 0;
                     int? conversationPosition = null;
-                    string map = null;
+
+                    var otherStuff = new List<ConditionalCrap>();
+                    
+                    //string file = $"{teResourceGUID.LongKey(voiceLineInstance.SoundFiles[0]):X12}";
 
                     if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
                         var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
@@ -151,12 +174,36 @@ namespace DataTool.ToolLogic.Dump {
                             
                             if (cond is STU_32A19631 cond2) {
                                 var subCond = cond2.m_4FF98D41;
-                                
-                                if (subCond is STU_E9DB72FF mapCond) {
-                                    map = MapNames[teResourceGUID.Index(mapCond.m_map)];
-                                }
-                                else {
-                                    //Debugger.Break();
+
+                                switch (subCond) {
+                                    // Map Specific?? 
+                                    case STU_E9DB72FF mapCond:
+                                        var mapName = MapNames[teResourceGUID.Index(mapCond.m_map)];
+                                        otherStuff.Add(new ConditionalCrap(mapCond.m_type, "MapSpecific", mapName));
+                                        break;
+                                    // interaction of some sort
+                                    case STU_D815520F heroCond:
+                                        var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
+                                        var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
+                                        otherStuff.Add(new ConditionalCrap(heroCond.m_type, "Interaction", name));
+                                        break;
+                                    // Dunno
+                                    case STU_D0364821 noclue:
+                                        // 0000000385450.0B2 - Reaper - "Enemies below us" - 6
+                                        break;
+                                    case STU_7C69EA0F lessclue:
+                                        otherStuff.Add(new ConditionalCrap(lessclue.m_type, "Less Clue", null));
+                                        break;
+                                    case STU_C37857A5 celebCond:
+                                        otherStuff.Add(new ConditionalCrap(celebCond.m_type, "Celebration", celebCond.GetCelebrationType(celebCond.m_celebrationType)));
+                                        break;
+                                    case STU_BDD783B9 stillnoclue:
+                                        otherStuff.Add(new ConditionalCrap(stillnoclue.m_type, "Still No Clue", null));
+                                        break;
+                                    default:
+                                        //var file = $"{teResourceGUID.LongKey(vl.VoiceSounds[0]):X12}";
+                                        //Debugger.Break();
+                                        break;
                                 }
                             } else {
                                 //Debugger.Break();
@@ -171,7 +218,7 @@ namespace DataTool.ToolLogic.Dump {
                     }
 
                     foreach (var sound in voiceLineInstance.SoundFiles)
-                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin, map));
+                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin, otherStuff));
                 }
             }
 
