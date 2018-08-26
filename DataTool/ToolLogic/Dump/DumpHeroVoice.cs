@@ -53,8 +53,8 @@ namespace DataTool.ToolLogic.Dump {
             public TeamIndex Team;
         }
 
-        public class EnemiesCond : BaseCondition {
-            public string GuessedType = "EnemiesCond";
+        public class VirtualCond : BaseCondition {
+            public string GuessedType = "VirtualCond";
             public string Virtual01C;
             public ulong Key;
         }
@@ -107,13 +107,14 @@ namespace DataTool.ToolLogic.Dump {
                 STUHero hero = GetInstance<STUHero>(heroGuid);
                 if (hero == null) continue;
                 
+                string heroNameActual = (GetString(hero.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroGuid)}").TrimEnd(' ');
+                
                 var progression = new ProgressionUnlocks(hero);
                 if (progression.LootBoxesUnlocks == null) continue; // no npcs thanks
                 
-                string heroNameActual = (GetString(hero.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroGuid)}").TrimEnd(' ');
                 STUVoiceSetComponent baseComponent = default;
                 Combo.ComboInfo baseInfo = default;
-                
+ 
                 Log("\tProcessing data for {0}", heroNameActual);
 
                 if (ProcessSounds(heroNameActual, hero.m_gameplayEntity, null, ref baseComponent, ref baseInfo)) {
@@ -234,11 +235,11 @@ namespace DataTool.ToolLogic.Dump {
                     case STU_C37857A5 celebCond:
                         @return.Add(new CelebCond{ m_type = celebCond.m_type, Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType)});
                         break;
-                    case STU_D0364821 enemyCond:
-                        @return.Add(new EnemiesCond {
-                            m_type = enemyCond.m_type,
-                            Virtual01C = teResourceGUID.AsString(enemyCond.m_identifier),
-                            Key = enemyCond.m_identifier.GUID
+                    case STU_D0364821 virtualCond:
+                        @return.Add(new VirtualCond {
+                            m_type = virtualCond.m_type,
+                            Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
+                            Key = virtualCond.m_identifier.GUID
                         });
                         break;
                     case STU_BDD783B9 teamCond:
