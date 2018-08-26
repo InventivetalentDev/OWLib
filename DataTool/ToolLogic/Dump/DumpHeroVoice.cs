@@ -67,13 +67,17 @@ namespace DataTool.ToolLogic.Dump {
             public ulong m_A20DCD80;
         }
 
+        public class Conversation {
+            public string GUID;
+            public int Position;
+        }
+
         public class SoundInfo {
             public string HeroName;
             public string SoundFile;
             public string StimulusSet;
-            public string ConvoSet;
-            public int? ConvoPos;
             public string Subtitle;
+            public Conversation Conversation;
             public string[] Skins;
             public CondDetails CondDetails;
             public List<BaseCondition> Conditions;
@@ -81,32 +85,17 @@ namespace DataTool.ToolLogic.Dump {
             [JsonIgnore]
             public ulong GUID;
 
-            public bool ShouldSerializeConvoSet() => !string.IsNullOrEmpty(ConvoSet);
-            public bool ShouldSerializeConvoPos() => ConvoPos != null;
+            public bool ShouldSerializeConversation() => Conversation != null;
             public bool ShouldSerializeSubtitle() => Subtitle != null;
             public bool ShouldSerializeSkins() => Skins != null;
             public bool ShouldSerializeCondDetails() => CondDetails != null;
             public bool ShouldSerializeConditions() => Conditions.Any();
-
-            public SoundInfo(string heroName, ulong guid, ulong groupGuid, string subtitle, ulong convoGuid, int? convoPosition, string skin, List<BaseCondition> conditions, CondDetails condDetails) {
-                GUID = guid;
-                HeroName = heroName;
-                SoundFile = $"{teResourceGUID.LongKey(guid):X12}";
-                StimulusSet = $"{teResourceGUID.LongKey(groupGuid):X12}";
-                ConvoSet = convoGuid == 0 ? null : $"{teResourceGUID.LongKey(convoGuid):X12}";
-                ConvoPos = convoPosition;
-                Subtitle = subtitle;
-                Skins = skin != null ? new []{skin} : null;
-                Conditions = conditions;
-                CondDetails = condDetails;
-            }
         }
         
         private static readonly Dictionary<uint, string> MapNames = new Dictionary<uint, string>();
+        private static List<SoundInfo> SoundList = new List<SoundInfo>();
 
-        public void Parse(ICLIFlags toolFlags) {
-            List<SoundInfo> soundList = new List<SoundInfo>();
-            
+        public void Parse(ICLIFlags toolFlags) {            
             foreach (ulong mapGuid in TrackedFiles[0x9F]) {
                 STUMapHeader mapHeader = GetInstance<STUMapHeader>(mapGuid);
                 if (mapHeader == null) continue;
@@ -127,40 +116,40 @@ namespace DataTool.ToolLogic.Dump {
                 
                 Log("\tProcessing data for {0}", heroNameActual);
 
-                if (ProcessSounds(heroNameActual, hero.m_gameplayEntity, null, ref baseComponent, ref baseInfo, ref soundList)) {
+                if (ProcessSounds(heroNameActual, hero.m_gameplayEntity, null, ref baseComponent, ref baseInfo)) {
                     if (hero.m_heroProgression == 0) continue;
                     
                     foreach (Unlock itemInfo in progression.OtherUnlocks)
-                        ProcessUnlock(heroNameActual, itemInfo, hero, baseComponent, baseInfo, ref soundList);
+                        ProcessUnlock(heroNameActual, itemInfo, hero, baseComponent, baseInfo);
 
                     foreach (var defaultUnlocks in progression.LevelUnlocks)
                         foreach (Unlock unlock in defaultUnlocks.Unlocks)
-                            ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo, ref soundList);
+                            ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo);
 
                     foreach (var eventUnlocks in progression.LootBoxesUnlocks) {
                         if (eventUnlocks?.Unlocks == null) continue;
 
                         foreach (Unlock unlock in eventUnlocks.Unlocks)
-                            ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo, ref soundList);
+                            ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo);
                     }
                 }
             }
 
             ParseJSON(
-                soundList.OrderBy(s => s.GUID).ToList(),
+                SoundList.OrderBy(s => s.GUID).ToList(),
                 toolFlags as DumpFlags
             );
         }
         
-        public static void ProcessUnlock(string heroNameActual, Unlock unlock, STUHero hero, STUVoiceSetComponent baseComponent, Combo.ComboInfo baseInfo, ref List<SoundInfo> soundList) {
+        private static void ProcessUnlock(string heroNameActual, Unlock unlock, STUHero hero, STUVoiceSetComponent baseComponent, Combo.ComboInfo baseInfo) {
             if (!(unlock.STU is STUUnlock_SkinTheme unlockSkinTheme)) return;
             if (unlockSkinTheme.m_0B1BA7C1 != 0)
                 return;
 
-            ProcessSkin(heroNameActual, unlockSkinTheme.m_skinTheme, hero, unlock.Name, baseComponent, baseInfo, ref soundList);
+            ProcessSkin(heroNameActual, unlockSkinTheme.m_skinTheme, hero, unlock.Name, baseComponent, baseInfo);
         }
         
-        public static void ProcessSkin(string heroNameActual, ulong skinResource, STUHero hero, string name, STUVoiceSetComponent baseComponent, Combo.ComboInfo baseInfo, ref List<SoundInfo> soundList) {
+        private static void ProcessSkin(string heroNameActual, ulong skinResource, STUHero hero, string name, STUVoiceSetComponent baseComponent, Combo.ComboInfo baseInfo) {
             STUSkinTheme skin = GetInstance<STUSkinTheme>(skinResource);
             if (skin == null)
                 return;
@@ -168,10 +157,10 @@ namespace DataTool.ToolLogic.Dump {
             STUVoiceSetComponent component = default;
             Combo.ComboInfo info = default;
 
-            ProcessSounds(heroNameActual, hero.m_gameplayEntity, name, ref component, ref info, ref soundList, baseComponent, baseInfo, SkinTheme.GetReplacements(skin));
-        }        
+            ProcessSounds(heroNameActual, hero.m_gameplayEntity, name, ref component, ref info, baseComponent, baseInfo, SkinTheme.GetReplacements(skin));
+        }
 
-        public static bool ProcessSounds(string heroNameActual, ulong entityMain, string skin, ref STUVoiceSetComponent voiceSetComponent, ref Combo.ComboInfo info, ref List<SoundInfo> soundList, STUVoiceSetComponent baseComponent = null, Combo.ComboInfo baseCombo = null, Dictionary<ulong, ulong> replacements = null) {
+        private static bool ProcessSounds(string heroNameActual, ulong entityMain, string skin, ref STUVoiceSetComponent voiceSetComponent, ref Combo.ComboInfo info, STUVoiceSetComponent baseComponent = null, Combo.ComboInfo baseCombo = null, Dictionary<ulong, ulong> replacements = null) {
             voiceSetComponent = GetInstance<STUVoiceSetComponent>(Combo.GetReplacement(entityMain, replacements));
 
             if (voiceSetComponent?.m_voiceDefinition == null)
@@ -189,96 +178,97 @@ namespace DataTool.ToolLogic.Dump {
             
             foreach (var voicelineInstanceInfo in voiceSetInfo.VoiceLineInstances) {
                 foreach (var voiceLineInstance in voicelineInstanceInfo.Value) {
-                    var subtitleInfo = GetInstance<STU_7A68A730>(voiceLineInstance.Subtitle);
-                    var subtitle = subtitleInfo?.m_798027DE.m_text;
-                    ulong conversationGuid = 0;
-                    int? conversationPosition = null;
-
-                    var conditions = new List<BaseCondition>();
-                    CondDetails conditionDetails = null;
-                    
-                    //string file = $"{teResourceGUID.LongKey(voiceLineInstance.SoundFiles[0]):X12}";
+                    SoundInfo newSound = new SoundInfo {
+                        HeroName = heroNameActual,
+                        Subtitle = GetInstance<STU_7A68A730>(voiceLineInstance.Subtitle)?.m_798027DE.m_text,
+                        Conditions = new List<BaseCondition>(),
+                        StimulusSet = teResourceGUID.AsString(voiceLineInstance.VoiceStimulus),
+                        Skins = skin != null ? new []{skin} : null
+                    };
 
                     if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
                         var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
-                        
+
                         if (vl.STU.m_voiceLineRuntime.m_4FF98D41 != null) {
-                            var cond = vl.STU.m_voiceLineRuntime.m_4FF98D41;
-                            
-                            if (cond is STU_32A19631 cond2) {
-                                var subCond = cond2.m_4FF98D41;
-
-                                switch (subCond) {
-                                    case STU_E9DB72FF mapCond:
-                                        conditions.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
-                                        break;
-                                    case STU_D815520F heroCond:
-                                        var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
-                                        var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                                        conditions.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = name});
-                                        break;
-                                    case STU_C37857A5 celebCond:
-                                        conditions.Add(new CelebCond{ m_type = celebCond.m_type, Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType)});
-                                        break;
-                                    case STU_D0364821 enemyCond:
-                                        conditions.Add(new EnemiesCond {
-                                            m_type = enemyCond.m_type,
-                                            Virtual01C = $"{teResourceGUID.LongKey(enemyCond.m_identifier):X12}",
-                                            Key = enemyCond.m_identifier.GUID
-                                        });
-                                        break;
-                                    case STU_BDD783B9 teamCond:
-                                        conditions.Add(new TeamCond{ m_type = teamCond.m_type, Team = teamCond.m_team });
-                                        break;
-                                    case STU_7C69EA0F thiccCond:
-                                        conditionDetails = new CondDetails {
-                                            m_amount = thiccCond.m_amount,
-                                            m_07D0F7AA = thiccCond.m_07D0F7AA,
-                                            m_967A138B = thiccCond.m_967A138B,
-                                            m_A20DCD80 = thiccCond.m_A20DCD80
-                                        };
-
-                                        if (thiccCond.m_4FF98D41 != null) {
-                                            foreach (STU_32A19631 condition in thiccCond.m_4FF98D41) {
-                                                switch (condition.m_4FF98D41) {
-                                                    case STU_E9DB72FF mapCond:
-                                                        conditions.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)] });
-                                                        break;
-                                                    case STU_BDD783B9 teamCond:
-                                                        conditions.Add(new TeamCond{ m_type = teamCond.m_type, Team = teamCond.m_team });
-                                                        break;
-                                                    case STU_D815520F heroCond:
-                                                        var h = GetInstance<STUHero>(heroCond.m_8C8C5285);
-                                                        var hName = (GetString(h?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                                                        conditions.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = hName});
-                                                        break;
-                                                }
-                                            }
-                                        }
-                                        break;
-                                    default:
-                                        //var file = $"{teResourceGUID.LongKey(vl.VoiceSounds[0]):X12}";
-                                        //Debugger.Break();
-                                        break;
-                                }
-                            } else {
-                                //Debugger.Break();
-                            }
+                            var condition = vl.STU.m_voiceLineRuntime.m_4FF98D41;
+                            newSound.Conditions = ParseConditions(condition, ref newSound);
                         }
+                            
 
                         if (vl.VoiceConversation != 0) {
                             var convo = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
-                            conversationPosition = convo.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx06F);
-                            conversationGuid = vl.VoiceConversation;
+                            
+                            newSound.Conversation = new Conversation {
+                                GUID = teResourceGUID.AsString(vl.VoiceConversation),
+                                Position = convo.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx06F)
+                            };
                         }
                     }
 
-                    foreach (var sound in voiceLineInstance.SoundFiles)
-                        soundList.Add(new SoundInfo(heroNameActual, sound, voiceLineInstance.VoiceStimulus, subtitle, conversationGuid, conversationPosition, skin, conditions, conditionDetails));
+                    foreach (var sound in voiceLineInstance.SoundFiles) {
+                        newSound.GUID = sound;
+                        newSound.SoundFile = teResourceGUID.AsString(sound);
+                        SoundList.Add(newSound);
+                    }
                 }
             }
 
             return true;
+        }
+        
+        private static List<BaseCondition> ParseConditions(STU_C1A2DB26 condition, ref SoundInfo newSound) {
+            var @return = new List<BaseCondition>();
+            
+            if (condition is STU_32A19631 cond2) {
+                var subCond = cond2.m_4FF98D41;
+
+                switch (subCond) {
+                    case STU_E9DB72FF mapCond:
+                        @return.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
+                        break;
+                    case STU_D815520F heroCond:
+                        var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
+                        var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
+                        @return.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = name});
+                        break;
+                    case STU_C37857A5 celebCond:
+                        @return.Add(new CelebCond{ m_type = celebCond.m_type, Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType)});
+                        break;
+                    case STU_D0364821 enemyCond:
+                        @return.Add(new EnemiesCond {
+                            m_type = enemyCond.m_type,
+                            Virtual01C = teResourceGUID.AsString(enemyCond.m_identifier),
+                            Key = enemyCond.m_identifier.GUID
+                        });
+                        break;
+                    case STU_BDD783B9 teamCond:
+                        @return.Add(new TeamCond{ m_type = teamCond.m_type, Team = teamCond.m_team });
+                        break;
+                    case STU_7C69EA0F thiccCond:
+                        newSound.CondDetails = new CondDetails {
+                            m_amount = thiccCond.m_amount,
+                            m_07D0F7AA = thiccCond.m_07D0F7AA,
+                            m_967A138B = thiccCond.m_967A138B,
+                            m_A20DCD80 = thiccCond.m_A20DCD80
+                        };
+
+                        // Thicc Cond is basically a wrapper of multiple subconditions that follow the same format as a normal condition.
+                        if (thiccCond.m_4FF98D41 != null) {
+                            foreach (STU_32A19631 cond in thiccCond.m_4FF98D41) {
+                                @return = ParseConditions(cond, ref newSound);
+                            }
+                        }
+                        break;
+                    default:
+                        //var file = $"{teResourceGUID.LongKey(vl.VoiceSounds[0]):X12}";
+                        //Debugger.Break();
+                        break;
+                }
+            } else {
+                //Debugger.Break();
+            }
+
+            return @return;
         }
     }
 }
