@@ -255,7 +255,7 @@ namespace DataTool.ToolLogic.Dump {
                         // Thicc Cond is basically a wrapper of multiple subconditions that follow the same format as a normal condition.
                         if (thiccCond.m_4FF98D41 != null) {
                             foreach (STU_32A19631 cond in thiccCond.m_4FF98D41) {
-                                @return = ParseConditions(cond, ref newSound);
+                                @return.AddRange(ParseConditions(cond, ref newSound));
                             }
                         }
                         break;
