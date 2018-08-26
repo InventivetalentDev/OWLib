@@ -19,6 +19,8 @@ namespace TankLib.STU.Types {
         [STUFieldAttribute(0x07D0F7AA)]
         public int m_07D0F7AA;
         
+        
+        // TODO: MOVE THIS, IT DOESN'T BELONG HERE
         public string GetCelebrationType(ulong key) {
             CelebrationMapping.TryGetValue(key, out string celeb);
             return celeb ?? $"UNKNOWN CELEBRATION? {teResourceGUID.AsString(key)}";

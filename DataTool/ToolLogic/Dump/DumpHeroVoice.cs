@@ -86,7 +86,6 @@ namespace DataTool.ToolLogic.Dump {
             public List<string> Skins;
             public ConditionsContainer Conditions;
             
-
             [JsonIgnore]
             public ulong GUID;
 
@@ -190,9 +189,8 @@ namespace DataTool.ToolLogic.Dump {
                         Skins = new List<string>()
                     };
 
-                    if (skin != null) {
+                    if (skin != null)
                         newSound.Skins.Add(skin);
-                    }
 
                     if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
                         var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
@@ -201,7 +199,6 @@ namespace DataTool.ToolLogic.Dump {
                             var condition = vl.STU.m_voiceLineRuntime.m_4FF98D41;
                             newSound.Conditions = ParseConditions(condition, ref newSound);
                         }
-                            
 
                         if (vl.VoiceConversation != 0) {
                             var convo = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
@@ -216,7 +213,6 @@ namespace DataTool.ToolLogic.Dump {
                     foreach (var sound in voiceLineInstance.SoundFiles) {
                         newSound.GUID = sound;
                         newSound.SoundFile = teResourceGUID.AsString(sound);
-
 
                         if (SoundList.ContainsKey(newSound.SoundFile)) {
                             if (skin != null) {
@@ -238,66 +234,77 @@ namespace DataTool.ToolLogic.Dump {
                 Required = 1,
                 Requirements = new List<BaseCondition>()
             };
-            
-            if (condition is STU_32A19631 cond2) {
-                var subCond = cond2.m_4FF98D41;                
 
-                switch (subCond) {
-                    case STU_E9DB72FF mapCond:
-                        @return.Requirements.Add(new MapCond{ CondType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
-                        break;
-                    case STU_D815520F heroCond:
-                        var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
-                        var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                        @return.Requirements.Add(new HeroCond{ CondType = heroCond.m_type,  Hero = name});
-                        break;
-                    case STU_C37857A5 celebCond:
-                        @return.Requirements.Add(new CelebCond {
-                            CondType = celebCond.m_type,
-                            Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType),
-                            Virtual0C1 = teResourceGUID.AsString(celebCond.m_celebrationType)
-                        });
-                        break;
-                    case STU_C7CA73B1 celebCond2:
-                        @return.Requirements.Add(new CelebCond2 {
-                            CondType = celebCond2.m_type,
-                            Celebration = celebCond2.GetCelebrationType(celebCond2.m_celebration),
-                            Virtual0C3 = teResourceGUID.AsString(celebCond2.m_celebration)
-                        });
-                        break;
-                    // Cond depends on Virtual 01Cs
-                    case STU_D0364821 virtualCond:
-                        @return.Requirements.Add(new VirtualCond {
-                            CondType = virtualCond.m_type,
-                            Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
-                            Key = virtualCond.m_identifier.GUID
-                        });
-                        break;
-                    case STU_BDD783B9 teamCond:
-                        @return.Requirements.Add(new TeamCond{ CondType = teamCond.m_type, Team = teamCond.m_team });
-                        break;
-                    case STU_7C69EA0F thiccCond:
-                        @return.Required = (int) thiccCond.m_amount; // Override the default requirement
+            if (!(condition is STU_32A19631 cond2)) return null;
+            var subCond = cond2.m_4FF98D41;                
 
-                        // Thicc Cond is basically a wrapper of multiple subconditions that follow the same format as a normal condition.
-                        if (thiccCond.m_4FF98D41 != null) {
-                            foreach (STU_32A19631 cond in thiccCond.m_4FF98D41) {
-                                var conds = ParseConditions(cond, ref newSound);
-                                if (conds != null)
-                                    @return.Requirements.AddRange(conds.Requirements);
-                            }
+            switch (subCond) {
+                case STU_E9DB72FF mapCond:
+                    @return.Requirements.Add(new MapCond{ CondType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
+                    break;
+                case STU_D815520F heroCond:
+                    var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
+                    var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
+                    @return.Requirements.Add(new HeroCond{ CondType = heroCond.m_type,  Hero = name});
+                    break;
+                case STU_C37857A5 celebCond:
+                    @return.Requirements.Add(new CelebCond {
+                        CondType = celebCond.m_type,
+                        Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType),
+                        Virtual0C1 = teResourceGUID.AsString(celebCond.m_celebrationType)
+                    });
+                    break;
+                case STU_C7CA73B1 celebCond2:
+                    @return.Requirements.Add(new CelebCond2 {
+                        CondType = celebCond2.m_type,
+                        Celebration = celebCond2.GetCelebrationType(celebCond2.m_celebration),
+                        Virtual0C3 = teResourceGUID.AsString(celebCond2.m_celebration)
+                    });
+                    break;
+                // Cond depends on Virtual 01Cs
+                case STU_D0364821 virtualCond:
+                    @return.Requirements.Add(new VirtualCond {
+                        CondType = virtualCond.m_type,
+                        Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
+                        Key = virtualCond.m_identifier.GUID
+                    });
+                    break;
+                case STU_BDD783B9 teamCond:
+                    @return.Requirements.Add(new TeamCond{ CondType = teamCond.m_type, Team = teamCond.m_team });
+                    break;
+                case STU_7C69EA0F thiccCond:
+                    @return.Required = (int) thiccCond.m_amount; // Override the default requirement
+
+                    // Thicc Cond is basically a wrapper of multiple subconditions that follow the same format as a normal condition.
+                    if (thiccCond.m_4FF98D41 != null) {
+                        foreach (STU_32A19631 cond in thiccCond.m_4FF98D41) {
+                            var conds = ParseConditions(cond, ref newSound);
+                            if (conds != null)
+                                @return.Requirements.AddRange(conds.Requirements);
                         }
-                        break;
-                    case STU_A95E4B99 genderCond:
-                        @return.Requirements.Add(new GenderCond { CondType = genderCond.m_type, Gender = genderCond.m_7D88A63A });
-                        break;
-                    default:
-                        @return = null; // No condition, don't return anything
-                        //Debugger.Break();
-                        break;
-                }
-            } else {
-                //Debugger.Break();
+                    }
+                    break;
+                case STU_A95E4B99 genderCond:
+                    @return.Requirements.Add(new GenderCond {
+                        CondType = genderCond.m_type,
+                        Gender = genderCond.m_7D88A63A,
+                        m_07D0F7AA = genderCond.m_07D0F7AA,
+                        m_967A138B = genderCond.m_967A138B,
+                        m_A20DCD80 = genderCond.m_A20DCD80
+                    });
+                    break;
+                case STU_C9F4617F genderCond2:
+                    @return.Requirements.Add(new GenderCond {
+                        CondType = genderCond2.m_type,
+                        Gender = genderCond2.m_7D88A63A,
+                        m_07D0F7AA = genderCond2.m_07D0F7AA,
+                        m_967A138B = genderCond2.m_967A138B,
+                        m_A20DCD80 = genderCond2.m_A20DCD80
+                    });
+                    break;
+                default:
+                    @return = null; // No condition, don't return anything
+                    break;
             }
 
             return @return;
