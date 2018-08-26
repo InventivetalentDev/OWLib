@@ -29,7 +29,7 @@ namespace DataTool.ToolLogic.Dump {
 
         public class BaseCondition {
             [JsonConverter(typeof(StringEnumConverter))]
-            public Enum_1AA009C2 ConditionType;
+            public Enum_1AA009C2 CondType;
         }
         public class MapCond : BaseCondition {
             public string Map;
@@ -65,10 +65,6 @@ namespace DataTool.ToolLogic.Dump {
         public class CelebCond2 : BaseCelebCond {
             public string Virtual0C3;
             public ulong Key;
-        }
-
-        public class CondDetails {
-            public uint m_amount;
         }
 
         public class Conversation {
@@ -248,23 +244,23 @@ namespace DataTool.ToolLogic.Dump {
 
                 switch (subCond) {
                     case STU_E9DB72FF mapCond:
-                        @return.Requirements.Add(new MapCond{ ConditionType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
+                        @return.Requirements.Add(new MapCond{ CondType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
                         break;
                     case STU_D815520F heroCond:
                         var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
                         var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                        @return.Requirements.Add(new HeroCond{ ConditionType = heroCond.m_type,  Hero = name});
+                        @return.Requirements.Add(new HeroCond{ CondType = heroCond.m_type,  Hero = name});
                         break;
                     case STU_C37857A5 celebCond:
                         @return.Requirements.Add(new CelebCond {
-                            ConditionType = celebCond.m_type,
+                            CondType = celebCond.m_type,
                             Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType),
                             Virtual0C1 = teResourceGUID.AsString(celebCond.m_celebrationType)
                         });
                         break;
                     case STU_C7CA73B1 celebCond2:
                         @return.Requirements.Add(new CelebCond2 {
-                            ConditionType = celebCond2.m_type,
+                            CondType = celebCond2.m_type,
                             Celebration = celebCond2.GetCelebrationType(celebCond2.m_celebration),
                             Virtual0C3 = teResourceGUID.AsString(celebCond2.m_celebration)
                         });
@@ -272,13 +268,13 @@ namespace DataTool.ToolLogic.Dump {
                     // Cond depends on Virtual 01Cs
                     case STU_D0364821 virtualCond:
                         @return.Requirements.Add(new VirtualCond {
-                            ConditionType = virtualCond.m_type,
+                            CondType = virtualCond.m_type,
                             Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
                             Key = virtualCond.m_identifier.GUID
                         });
                         break;
                     case STU_BDD783B9 teamCond:
-                        @return.Requirements.Add(new TeamCond{ ConditionType = teamCond.m_type, Team = teamCond.m_team });
+                        @return.Requirements.Add(new TeamCond{ CondType = teamCond.m_type, Team = teamCond.m_team });
                         break;
                     case STU_7C69EA0F thiccCond:
                         @return.Required = (int) thiccCond.m_amount; // Override the default requirement
@@ -293,7 +289,7 @@ namespace DataTool.ToolLogic.Dump {
                         }
                         break;
                     case STU_A95E4B99 genderCond:
-                        @return.Requirements.Add(new GenderCond { ConditionType = genderCond.m_type, Gender = genderCond.m_7D88A63A });
+                        @return.Requirements.Add(new GenderCond { CondType = genderCond.m_type, Gender = genderCond.m_7D88A63A });
                         break;
                     default:
                         @return = null; // No condition, don't return anything
