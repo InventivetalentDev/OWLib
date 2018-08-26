@@ -31,12 +31,6 @@ namespace DataTool.ToolLogic.Dump {
             public Enum_1AA009C2 m_type;
             public string GuessedType;
         }
-
-        public class CelebCond : BaseCondition {
-            public string GuessedType = "CelebrationCond";
-            public string Celebration;
-        }
-
         public class MapCond : BaseCondition {
             public string GuessedType = "MapCond";
             public string Map;
@@ -49,6 +43,7 @@ namespace DataTool.ToolLogic.Dump {
         
         public class TeamCond : BaseCondition {
             public string GuessedType = "TeamCond";
+            
             [JsonConverter(typeof(StringEnumConverter))]
             public TeamIndex Team;
         }
@@ -59,12 +54,35 @@ namespace DataTool.ToolLogic.Dump {
             public ulong Key;
         }
 
+        public class GenderCond : BaseCondition {
+            public string GuessedType = "GenderCond";
+
+            [JsonConverter(typeof(StringEnumConverter))]
+            public Enum_0C014B4A Gender;
+        }
+
+        public class BaseCelebCond : BaseCondition {
+            public string Celebration;
+        }
+        
+        public class CelebCond : BaseCelebCond {
+            public string GuessedType = "CelebCond";
+            public string Virtual0C1;
+        }
+        
+        public class CelebCond2 : BaseCelebCond {
+            public string GuessedType = "CelebCond2";
+            public string Virtual0C3;
+            public ulong Key;
+        }
+
         public class CondDetails {
             public uint m_amount;
             public int m_07D0F7AA;
+            public ulong m_A20DCD80;
+            
             [JsonConverter(typeof(StringEnumConverter))]
             public Enum_AB6CE3D1 m_967A138B;
-            public ulong m_A20DCD80;
         }
 
         public class Conversation {
@@ -233,8 +251,20 @@ namespace DataTool.ToolLogic.Dump {
                         @return.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = name});
                         break;
                     case STU_C37857A5 celebCond:
-                        @return.Add(new CelebCond{ m_type = celebCond.m_type, Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType)});
+                        @return.Add(new CelebCond {
+                            m_type = celebCond.m_type,
+                            Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType),
+                            Virtual0C1 = teResourceGUID.AsString(celebCond.m_celebrationType)
+                        });
                         break;
+                    case STU_C7CA73B1 celebCond2:
+                        @return.Add(new CelebCond2 {
+                            m_type = celebCond2.m_type,
+                            Celebration = celebCond2.GetCelebrationType(celebCond2.m_celebration),
+                            Virtual0C3 = teResourceGUID.AsString(celebCond2.m_celebration)
+                        });
+                        break;
+                    // Cond depends on Virtual 01Cs
                     case STU_D0364821 virtualCond:
                         @return.Add(new VirtualCond {
                             m_type = virtualCond.m_type,
@@ -260,8 +290,10 @@ namespace DataTool.ToolLogic.Dump {
                             }
                         }
                         break;
+                    case STU_A95E4B99 genderCond:
+                        @return.Add(new GenderCond { m_type = genderCond.m_type, Gender = genderCond.m_7D88A63A });
+                        break;
                     default:
-                        //var file = $"{teResourceGUID.LongKey(vl.VoiceSounds[0]):X12}";
                         //Debugger.Break();
                         break;
                 }
