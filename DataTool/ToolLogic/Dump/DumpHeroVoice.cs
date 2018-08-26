@@ -28,35 +28,28 @@ namespace DataTool.ToolLogic.Dump {
         }
 
         public class BaseCondition {
-            public Enum_1AA009C2 m_type;
-            public string GuessedType;
+            [JsonConverter(typeof(StringEnumConverter))]
+            public Enum_1AA009C2 ConditionType;
         }
         public class MapCond : BaseCondition {
-            public string GuessedType = "MapCond";
             public string Map;
         }
 
         public class HeroCond : BaseCondition {
-            public string GuessedType = "HeroCond";
             public string Hero;
         }
         
         public class TeamCond : BaseCondition {
-            public string GuessedType = "TeamCond";
-            
             [JsonConverter(typeof(StringEnumConverter))]
             public TeamIndex Team;
         }
 
         public class VirtualCond : BaseCondition {
-            public string GuessedType = "VirtualCond";
             public string Virtual01C;
             public ulong Key;
         }
 
         public class GenderCond : BaseCondition {
-            public string GuessedType = "GenderCond";
-
             [JsonConverter(typeof(StringEnumConverter))]
             public Enum_0C014B4A Gender;
         }
@@ -66,28 +59,26 @@ namespace DataTool.ToolLogic.Dump {
         }
         
         public class CelebCond : BaseCelebCond {
-            public string GuessedType = "CelebCond";
             public string Virtual0C1;
         }
         
         public class CelebCond2 : BaseCelebCond {
-            public string GuessedType = "CelebCond2";
             public string Virtual0C3;
             public ulong Key;
         }
 
         public class CondDetails {
             public uint m_amount;
-            public int m_07D0F7AA;
-            public ulong m_A20DCD80;
-            
-            [JsonConverter(typeof(StringEnumConverter))]
-            public Enum_AB6CE3D1 m_967A138B;
         }
 
         public class Conversation {
             public string GUID;
             public int Position;
+        }
+
+        public class ConditionsContainer {
+            public int Required;
+            public List<BaseCondition> Requirements;
         }
 
         public class SoundInfo {
@@ -96,22 +87,21 @@ namespace DataTool.ToolLogic.Dump {
             public string StimulusSet;
             public string Subtitle;
             public Conversation Conversation;
-            public string[] Skins;
-            public CondDetails CondDetails;
-            public List<BaseCondition> Conditions;
+            public List<string> Skins;
+            public ConditionsContainer Conditions;
+            
 
             [JsonIgnore]
             public ulong GUID;
 
             public bool ShouldSerializeConversation() => Conversation != null;
             public bool ShouldSerializeSubtitle() => Subtitle != null;
-            public bool ShouldSerializeSkins() => Skins != null;
-            public bool ShouldSerializeCondDetails() => CondDetails != null;
-            public bool ShouldSerializeConditions() => Conditions.Any();
+            public bool ShouldSerializeSkins() => Skins.Any();
+            public bool ShouldSerializeConditions() => Conditions != null;
         }
         
         private static readonly Dictionary<uint, string> MapNames = new Dictionary<uint, string>();
-        private static List<SoundInfo> SoundList = new List<SoundInfo>();
+        private static Dictionary<string, SoundInfo> SoundList = new Dictionary<string, SoundInfo>();
 
         public void Parse(ICLIFlags toolFlags) {            
             foreach (ulong mapGuid in TrackedFiles[0x9F]) {
@@ -155,7 +145,7 @@ namespace DataTool.ToolLogic.Dump {
             }
 
             ParseJSON(
-                SoundList.OrderBy(s => s.GUID).ToList(),
+                SoundList,
                 toolFlags as DumpFlags
             );
         }
@@ -200,10 +190,13 @@ namespace DataTool.ToolLogic.Dump {
                     SoundInfo newSound = new SoundInfo {
                         HeroName = heroNameActual,
                         Subtitle = GetInstance<STU_7A68A730>(voiceLineInstance.Subtitle)?.m_798027DE.m_text,
-                        Conditions = new List<BaseCondition>(),
                         StimulusSet = teResourceGUID.AsString(voiceLineInstance.VoiceStimulus),
-                        Skins = skin != null ? new []{skin} : null
+                        Skins = new List<string>()
                     };
+
+                    if (skin != null) {
+                        newSound.Skins.Add(skin);
+                    }
 
                     if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
                         var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
@@ -227,7 +220,16 @@ namespace DataTool.ToolLogic.Dump {
                     foreach (var sound in voiceLineInstance.SoundFiles) {
                         newSound.GUID = sound;
                         newSound.SoundFile = teResourceGUID.AsString(sound);
-                        SoundList.Add(newSound);
+
+
+                        if (SoundList.ContainsKey(newSound.SoundFile)) {
+                            if (skin != null) {
+                                SoundList[newSound.SoundFile].Skins.Add(skin);
+                                continue;
+                            }
+                        }
+                        
+                        SoundList[newSound.SoundFile] = newSound;
                     }
                 }
             }
@@ -235,65 +237,66 @@ namespace DataTool.ToolLogic.Dump {
             return true;
         }
         
-        private static List<BaseCondition> ParseConditions(STU_C1A2DB26 condition, ref SoundInfo newSound) {
-            var @return = new List<BaseCondition>();
+        private static ConditionsContainer ParseConditions(STU_C1A2DB26 condition, ref SoundInfo newSound) {
+            var @return = new ConditionsContainer {
+                Required = 1,
+                Requirements = new List<BaseCondition>()
+            };
             
             if (condition is STU_32A19631 cond2) {
-                var subCond = cond2.m_4FF98D41;
+                var subCond = cond2.m_4FF98D41;                
 
                 switch (subCond) {
                     case STU_E9DB72FF mapCond:
-                        @return.Add(new MapCond{ m_type = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
+                        @return.Requirements.Add(new MapCond{ ConditionType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
                         break;
                     case STU_D815520F heroCond:
                         var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
                         var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                        @return.Add(new HeroCond{ m_type = heroCond.m_type,  Hero = name});
+                        @return.Requirements.Add(new HeroCond{ ConditionType = heroCond.m_type,  Hero = name});
                         break;
                     case STU_C37857A5 celebCond:
-                        @return.Add(new CelebCond {
-                            m_type = celebCond.m_type,
+                        @return.Requirements.Add(new CelebCond {
+                            ConditionType = celebCond.m_type,
                             Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType),
                             Virtual0C1 = teResourceGUID.AsString(celebCond.m_celebrationType)
                         });
                         break;
                     case STU_C7CA73B1 celebCond2:
-                        @return.Add(new CelebCond2 {
-                            m_type = celebCond2.m_type,
+                        @return.Requirements.Add(new CelebCond2 {
+                            ConditionType = celebCond2.m_type,
                             Celebration = celebCond2.GetCelebrationType(celebCond2.m_celebration),
                             Virtual0C3 = teResourceGUID.AsString(celebCond2.m_celebration)
                         });
                         break;
                     // Cond depends on Virtual 01Cs
                     case STU_D0364821 virtualCond:
-                        @return.Add(new VirtualCond {
-                            m_type = virtualCond.m_type,
+                        @return.Requirements.Add(new VirtualCond {
+                            ConditionType = virtualCond.m_type,
                             Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
                             Key = virtualCond.m_identifier.GUID
                         });
                         break;
                     case STU_BDD783B9 teamCond:
-                        @return.Add(new TeamCond{ m_type = teamCond.m_type, Team = teamCond.m_team });
+                        @return.Requirements.Add(new TeamCond{ ConditionType = teamCond.m_type, Team = teamCond.m_team });
                         break;
                     case STU_7C69EA0F thiccCond:
-                        newSound.CondDetails = new CondDetails {
-                            m_amount = thiccCond.m_amount,
-                            m_07D0F7AA = thiccCond.m_07D0F7AA,
-                            m_967A138B = thiccCond.m_967A138B,
-                            m_A20DCD80 = thiccCond.m_A20DCD80
-                        };
+                        @return.Required = (int) thiccCond.m_amount; // Override the default requirement
 
                         // Thicc Cond is basically a wrapper of multiple subconditions that follow the same format as a normal condition.
                         if (thiccCond.m_4FF98D41 != null) {
                             foreach (STU_32A19631 cond in thiccCond.m_4FF98D41) {
-                                @return.AddRange(ParseConditions(cond, ref newSound));
+                                var conds = ParseConditions(cond, ref newSound);
+                                if (conds != null)
+                                    @return.Requirements.AddRange(conds.Requirements);
                             }
                         }
                         break;
                     case STU_A95E4B99 genderCond:
-                        @return.Add(new GenderCond { m_type = genderCond.m_type, Gender = genderCond.m_7D88A63A });
+                        @return.Requirements.Add(new GenderCond { ConditionType = genderCond.m_type, Gender = genderCond.m_7D88A63A });
                         break;
                     default:
+                        @return = null; // No condition, don't return anything
                         //Debugger.Break();
                         break;
                 }

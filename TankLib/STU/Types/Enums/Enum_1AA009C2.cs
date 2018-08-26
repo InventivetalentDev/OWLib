@@ -4,5 +4,12 @@
 namespace TankLib.STU.Types.Enums {
     [STUEnumAttribute(0x1AA009C2)]
     public enum Enum_1AA009C2 : uint {
+        VirtualCond = 6, // ?? Lots of random stuff, pain sounds, enemy coming from X sounds, event interactions/sounds
+        MapCond = 7,
+        TeamCond = 9,
+        HeroCond = 11,
+        CelebrationCond2 = 14, // Hardly used? 15 seems to be the main Celebration condition, unsure how this one relates.
+        CelebrationCond = 15,
+        GenderCond = 17
     }
 }
