@@ -287,19 +287,13 @@ namespace DataTool.ToolLogic.Dump {
                 case STU_A95E4B99 genderCond:
                     @return.Requirements.Add(new GenderCond {
                         CondType = genderCond.m_type,
-                        Gender = genderCond.m_7D88A63A,
-                        m_07D0F7AA = genderCond.m_07D0F7AA,
-                        m_967A138B = genderCond.m_967A138B,
-                        m_A20DCD80 = genderCond.m_A20DCD80
+                        Gender = genderCond.m_7D88A63A
                     });
                     break;
                 case STU_C9F4617F genderCond2:
                     @return.Requirements.Add(new GenderCond {
                         CondType = genderCond2.m_type,
-                        Gender = genderCond2.m_7D88A63A,
-                        m_07D0F7AA = genderCond2.m_07D0F7AA,
-                        m_967A138B = genderCond2.m_967A138B,
-                        m_A20DCD80 = genderCond2.m_A20DCD80
+                        Gender = genderCond2.m_7D88A63A
                     });
                     break;
                 default:
