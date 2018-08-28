@@ -104,7 +104,7 @@
     <Compile Include="ToolLogic\Dbg\DebugMapDump.cs" />
     <Compile Include="ToolLogic\Dbg\DebugVoodoo.cs" />
     <Compile Include="ToolLogic\Dump\DumpFlags.cs" />
-    <Compile Include="ToolLogic\Dump\DumpHeroVoice.cs" />
+    <Compile Include="ToolLogic\Dump\DumpVoice.cs" />
     <Compile Include="ToolLogic\Dump\DumpStrings.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebug0EE.cs" />
     <Compile Include="ToolLogic\Extract\Debug\ExtractDebugAnimNodes.cs" />

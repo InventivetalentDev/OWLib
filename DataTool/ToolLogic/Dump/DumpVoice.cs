@@ -21,63 +21,71 @@ using STUVoiceSetComponent = TankLib.STU.Types.STUVoiceSetComponent;
 using static DataTool.Helper.Logger;
 
 namespace DataTool.ToolLogic.Dump {
-    [Tool("dump-hero-voice", Description = "Dumps all the strings", TrackTypes = new ushort[] { 0x75 }, CustomFlags = typeof(DumpFlags))]
-    public class DumpHeroVoice : JSONTool, ITool {
+    [Tool("dump-voice", Description = "Dumps voice data", TrackTypes = new ushort[] { 0x75, 0x9F }, CustomFlags = typeof(DumpFlags))]
+    public class DumpVoice : JSONTool, ITool {
         public void IntegrateView(object sender) {
             throw new NotImplementedException();
         }
 
-        public class BaseCondition {
+        private class BaseCondition {
             [JsonConverter(typeof(StringEnumConverter))]
             public Enum_1AA009C2 CondType;
+            
+            [JsonIgnore]
+            public int m_07D0F7AA;
+            [JsonIgnore]
+            public ulong m_A20DCD80;
+            [JsonIgnore]
+            public Enum_AB6CE3D1 m_967A138B;
         }
-        public class MapCond : BaseCondition {
+        
+        private class MapCond : BaseCondition {
             public string Map;
         }
 
-        public class HeroCond : BaseCondition {
+        private class HeroCond : BaseCondition {
             public string Hero;
         }
         
-        public class TeamCond : BaseCondition {
+        private class TeamCond : BaseCondition {
             [JsonConverter(typeof(StringEnumConverter))]
             public TeamIndex Team;
         }
 
-        public class VirtualCond : BaseCondition {
+        private class VirtualCond : BaseCondition {
             public string Virtual01C;
             public ulong Key;
         }
 
-        public class GenderCond : BaseCondition {
+        private class GenderCond : BaseCondition {
             [JsonConverter(typeof(StringEnumConverter))]
             public Enum_0C014B4A Gender;
         }
 
-        public class BaseCelebCond : BaseCondition {
+        private class BaseCelebCond : BaseCondition {
             public string Celebration;
         }
         
-        public class CelebCond : BaseCelebCond {
+        private class CelebCond : BaseCelebCond {
             public string Virtual0C1;
         }
         
-        public class CelebCond2 : BaseCelebCond {
+        private class CelebCond2 : BaseCelebCond {
             public string Virtual0C3;
             public ulong Key;
         }
 
-        public class Conversation {
+        private class Conversation {
             public string GUID;
             public int Position;
         }
 
-        public class ConditionsContainer {
+        private class ConditionsContainer {
             public int Required;
             public List<BaseCondition> Requirements;
         }
 
-        public class SoundInfo {
+        private class SoundInfo {
             public string HeroName;
             public string SoundFile;
             public string StimulusSet;
@@ -96,7 +104,7 @@ namespace DataTool.ToolLogic.Dump {
         }
         
         private static readonly Dictionary<uint, string> MapNames = new Dictionary<uint, string>();
-        private static Dictionary<string, SoundInfo> SoundList = new Dictionary<string, SoundInfo>();
+        private static readonly Dictionary<string, SoundInfo> SoundList = new Dictionary<string, SoundInfo>();
 
         public void Parse(ICLIFlags toolFlags) {            
             foreach (ulong mapGuid in TrackedFiles[0x9F]) {
@@ -113,7 +121,7 @@ namespace DataTool.ToolLogic.Dump {
                 string heroNameActual = (GetString(hero.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroGuid)}").TrimEnd(' ');
                 
                 var progression = new ProgressionUnlocks(hero);
-                if (progression.LootBoxesUnlocks == null) continue; // no npcs thanks
+                if (progression.LootBoxesUnlocks == null) continue; // no NPCs thanks
                 
                 STUVoiceSetComponent baseComponent = default;
                 Combo.ComboInfo baseInfo = default;
@@ -201,11 +209,11 @@ namespace DataTool.ToolLogic.Dump {
                         }
 
                         if (vl.VoiceConversation != 0) {
-                            var convo = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
+                            var conversation = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
                             
                             newSound.Conversation = new Conversation {
                                 GUID = teResourceGUID.AsString(vl.VoiceConversation),
-                                Position = convo.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx06F)
+                                Position = conversation.m_voiceConversationLine.ToList().FindIndex(c => c.m_lineGUID == voiceLineInstance.GUIDx06F)
                             };
                         }
                     }
@@ -272,15 +280,20 @@ namespace DataTool.ToolLogic.Dump {
                 case STU_BDD783B9 teamCond:
                     @return.Requirements.Add(new TeamCond{ CondType = teamCond.m_type, Team = teamCond.m_team });
                     break;
-                case STU_7C69EA0F thiccCond:
-                    @return.Required = (int) thiccCond.m_amount; // Override the default requirement
+                case STU_7C69EA0F multiCond:
+                    @return.Required = (int) multiCond.m_amount; // Override the default requirement
 
-                    // Thicc Cond is basically a wrapper of multiple subconditions that follow the same format as a normal condition.
-                    if (thiccCond.m_4FF98D41 != null) {
-                        foreach (STU_32A19631 cond in thiccCond.m_4FF98D41) {
-                            var conds = ParseConditions(cond, ref newSound);
-                            if (conds != null)
-                                @return.Requirements.AddRange(conds.Requirements);
+                    // This condition is basically a wrapper of multiple sub conditions that follow the same format as a normal condition.
+                    if (multiCond.m_4FF98D41 != null) {
+                        foreach (var cond in multiCond.m_4FF98D41) {
+                            if (cond is STU_32A19631) {
+                                var conditions = ParseConditions(cond, ref newSound);
+                                if (conditions != null)
+                                    @return.Requirements.AddRange(conditions.Requirements);
+                            } else {
+                                // Wot
+                                // Debugger.Break()
+                            }
                         }
                     }
                     break;
