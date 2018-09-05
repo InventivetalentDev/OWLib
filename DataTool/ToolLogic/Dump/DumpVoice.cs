@@ -26,6 +26,7 @@ namespace DataTool.ToolLogic.Dump {
         }
 
         public class BaseCondition {
+            [DataMember(Order = 0)]
             public Enum_1AA009C2 CondType;
             
             public string Map;
@@ -40,7 +41,6 @@ namespace DataTool.ToolLogic.Dump {
 
             [IgnoreDataMember]
             public ulong Key;
-
             
             public bool ShouldSerializeMap() => CondType == Enum_1AA009C2.MapCond;
             public bool ShouldSerializeHero() => CondType == Enum_1AA009C2.HeroCond;
