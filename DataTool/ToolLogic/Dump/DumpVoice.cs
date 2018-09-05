@@ -25,8 +25,31 @@ namespace DataTool.ToolLogic.Dump {
             throw new NotImplementedException();
         }
 
-        public abstract class BaseCondition {
+        public class BaseCondition {
             public Enum_1AA009C2 CondType;
+            
+            public string Map;
+            public string Hero;
+            public TeamIndex Team;
+            public Enum_0C014B4A Gender;
+            public string Celebration;
+
+            public string Virtual0C1;
+            public string Virtual0C3;
+            public string Virtual01C;
+
+            [IgnoreDataMember]
+            public ulong Key;
+
+            
+            public bool ShouldSerializeMap() => CondType == Enum_1AA009C2.MapCond;
+            public bool ShouldSerializeHero() => CondType == Enum_1AA009C2.HeroCond;
+            public bool ShouldSerializeTeam() => CondType == Enum_1AA009C2.TeamCond;
+            public bool ShouldSerializeGender() => CondType == Enum_1AA009C2.GenderCond || CondType == Enum_1AA009C2.LanguageGenderCond;
+            public bool ShouldSerializeCelebration() => CondType == Enum_1AA009C2.CelebrationCond || CondType == Enum_1AA009C2.CelebrationCond2;
+            public bool ShouldSerializeVirtual0C1() => Virtual0C1 != null;
+            public bool ShouldSerializeVirtual0C3() => Virtual0C3 != null;
+            public bool ShouldSerializeVirtual01C() => Virtual01C != null;
             
             [IgnoreDataMember]
             public int m_07D0F7AA;
@@ -34,40 +57,6 @@ namespace DataTool.ToolLogic.Dump {
             public ulong m_A20DCD80;
             [IgnoreDataMember]
             public Enum_AB6CE3D1 m_967A138B;
-        }
-        
-        public class MapCond : BaseCondition {
-            public string Map;
-        }
-
-        public class HeroCond : BaseCondition {
-            public string Hero;
-        }
-        
-        public class TeamCond : BaseCondition {
-            public TeamIndex Team;
-        }
-
-        public class VirtualCond : BaseCondition {
-            public string Virtual01C;
-            public ulong Key;
-        }
-
-        public class GenderCond : BaseCondition {
-            public Enum_0C014B4A Gender;
-        }
-
-        public class BaseCelebCond : BaseCondition {
-            public string Celebration;
-        }
-
-        public class CelebCond : BaseCelebCond {
-            public string Virtual0C1;
-        }
-
-        public class CelebCond2 : BaseCelebCond {
-            public string Virtual0C3;
-            public ulong Key;
         }
 
         public class Conversation {
@@ -242,22 +231,22 @@ namespace DataTool.ToolLogic.Dump {
 
             switch (subCond) {
                 case STU_E9DB72FF mapCond:
-                    @return.Requirements.Add(new MapCond{ CondType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
+                    @return.Requirements.Add(new BaseCondition{ CondType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
                     break;
                 case STU_D815520F heroCond:
                     var hero = GetInstance<STUHero>(heroCond.m_8C8C5285);
                     var name = (GetString(hero?.m_0EDCE350) ?? $"Unknown{teResourceGUID.Index(heroCond.m_8C8C5285)}").TrimEnd(' ');
-                    @return.Requirements.Add(new HeroCond{ CondType = heroCond.m_type,  Hero = name});
+                    @return.Requirements.Add(new BaseCondition{ CondType = heroCond.m_type,  Hero = name});
                     break;
                 case STU_C37857A5 celebCond:
-                    @return.Requirements.Add(new CelebCond {
+                    @return.Requirements.Add(new BaseCondition {
                         CondType = celebCond.m_type,
                         Celebration = celebCond.GetCelebrationType(celebCond.m_celebrationType),
                         Virtual0C1 = teResourceGUID.AsString(celebCond.m_celebrationType)
                     });
                     break;
                 case STU_C7CA73B1 celebCond2:
-                    @return.Requirements.Add(new CelebCond2 {
+                    @return.Requirements.Add(new BaseCondition {
                         CondType = celebCond2.m_type,
                         Celebration = celebCond2.GetCelebrationType(celebCond2.m_celebration),
                         Virtual0C3 = teResourceGUID.AsString(celebCond2.m_celebration)
@@ -265,14 +254,14 @@ namespace DataTool.ToolLogic.Dump {
                     break;
                 // Cond depends on Virtual 01Cs
                 case STU_D0364821 virtualCond:
-                    @return.Requirements.Add(new VirtualCond {
+                    @return.Requirements.Add(new BaseCondition {
                         CondType = virtualCond.m_type,
                         Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
                         Key = virtualCond.m_identifier.GUID
                     });
                     break;
                 case STU_BDD783B9 teamCond:
-                    @return.Requirements.Add(new TeamCond{ CondType = teamCond.m_type, Team = teamCond.m_team });
+                    @return.Requirements.Add(new BaseCondition{ CondType = teamCond.m_type, Team = teamCond.m_team });
                     break;
                 case STU_7C69EA0F multiCond:
                     @return.Required = (int) multiCond.m_amount; // Override the default requirement
@@ -292,13 +281,13 @@ namespace DataTool.ToolLogic.Dump {
                     }
                     break;
                 case STU_A95E4B99 genderCond:
-                    @return.Requirements.Add(new GenderCond {
+                    @return.Requirements.Add(new BaseCondition {
                         CondType = genderCond.m_type,
                         Gender = genderCond.m_7D88A63A
                     });
                     break;
                 case STU_C9F4617F genderCond2:
-                    @return.Requirements.Add(new GenderCond {
+                    @return.Requirements.Add(new BaseCondition {
                         CondType = genderCond2.m_type,
                         Gender = genderCond2.m_7D88A63A
                     });
