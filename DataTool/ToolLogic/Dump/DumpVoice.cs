@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using DataTool.JSON;
 using System.Linq;
+using System.Runtime.Serialization;
 using DataTool.DataModels;
 using DataTool.Flag;
-using DataTool.JSON;
-using DataTool.SaveLogic;
 using DataTool.SaveLogic.Unlock;
 using static DataTool.Program;
 using static DataTool.Helper.STUHelper;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using TankLib;
 using TankLib.STU.Types;
 using TankLib.STU.Types.Enums;
@@ -19,6 +16,7 @@ using static DataTool.Helper.IO;
 using STUHero = TankLib.STU.Types.STUHero;
 using STUVoiceSetComponent = TankLib.STU.Types.STUVoiceSetComponent;
 using static DataTool.Helper.Logger;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace DataTool.ToolLogic.Dump {
     [Tool("dump-voice", Description = "Dumps voice data", TrackTypes = new ushort[] { 0x75, 0x9F }, CustomFlags = typeof(DumpFlags))]
@@ -27,65 +25,62 @@ namespace DataTool.ToolLogic.Dump {
             throw new NotImplementedException();
         }
 
-        private class BaseCondition {
-            [JsonConverter(typeof(StringEnumConverter))]
+        public abstract class BaseCondition {
             public Enum_1AA009C2 CondType;
             
-            [JsonIgnore]
+            [IgnoreDataMember]
             public int m_07D0F7AA;
-            [JsonIgnore]
+            [IgnoreDataMember]
             public ulong m_A20DCD80;
-            [JsonIgnore]
+            [IgnoreDataMember]
             public Enum_AB6CE3D1 m_967A138B;
         }
         
-        private class MapCond : BaseCondition {
+        public class MapCond : BaseCondition {
             public string Map;
         }
 
-        private class HeroCond : BaseCondition {
+        public class HeroCond : BaseCondition {
             public string Hero;
         }
         
-        private class TeamCond : BaseCondition {
-            [JsonConverter(typeof(StringEnumConverter))]
+        public class TeamCond : BaseCondition {
             public TeamIndex Team;
         }
 
-        private class VirtualCond : BaseCondition {
+        public class VirtualCond : BaseCondition {
             public string Virtual01C;
             public ulong Key;
         }
 
-        private class GenderCond : BaseCondition {
-            [JsonConverter(typeof(StringEnumConverter))]
+        public class GenderCond : BaseCondition {
             public Enum_0C014B4A Gender;
         }
 
-        private class BaseCelebCond : BaseCondition {
+        public class BaseCelebCond : BaseCondition {
             public string Celebration;
         }
-        
-        private class CelebCond : BaseCelebCond {
+
+        public class CelebCond : BaseCelebCond {
             public string Virtual0C1;
         }
-        
-        private class CelebCond2 : BaseCelebCond {
+
+        public class CelebCond2 : BaseCelebCond {
             public string Virtual0C3;
             public ulong Key;
         }
 
-        private class Conversation {
+        public class Conversation {
             public string GUID;
             public int Position;
         }
 
-        private class ConditionsContainer {
+        public class ConditionsContainer {
             public int Required;
             public List<BaseCondition> Requirements;
         }
 
-        private class SoundInfo {
+        public class SoundInfo {
             public string HeroName;
             public string SoundFile;
             public string StimulusSet;
@@ -93,8 +88,8 @@ namespace DataTool.ToolLogic.Dump {
             public Conversation Conversation;
             public List<string> Skins;
             public ConditionsContainer Conditions;
-            
-            [JsonIgnore]
+
+            [IgnoreDataMember]
             public ulong GUID;
 
             public bool ShouldSerializeConversation() => Conversation != null;
@@ -126,7 +121,7 @@ namespace DataTool.ToolLogic.Dump {
                 STUVoiceSetComponent baseComponent = default;
                 Combo.ComboInfo baseInfo = default;
  
-                Log("\tProcessing data for {0}", heroNameActual);
+                Log($"\tProcessing data for {heroNameActual}");
 
                 if (ProcessSounds(heroNameActual, hero.m_gameplayEntity, null, ref baseComponent, ref baseInfo)) {
                     if (hero.m_heroProgression == 0) continue;
@@ -147,7 +142,7 @@ namespace DataTool.ToolLogic.Dump {
                 }
             }
 
-            ParseJSON(
+            OutputJSON(
                 SoundList,
                 toolFlags as DumpFlags
             );
