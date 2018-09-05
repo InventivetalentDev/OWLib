@@ -203,9 +203,8 @@ namespace DataTool.ToolLogic.Dump {
                     if (voiceSet.VoiceLines.ContainsKey(voiceLineInstance.GUIDx06F)) {
                         var vl = voiceSet.VoiceLines[voiceLineInstance.GUIDx06F];
 
-                        if (vl.STU.m_voiceLineRuntime.m_4FF98D41 != null) {
-                            var condition = vl.STU.m_voiceLineRuntime.m_4FF98D41;
-                            newSound.Conditions = ParseConditions(condition, ref newSound);
+                        if (vl.Conditions != null) {
+                            newSound.Conditions = ParseConditions(vl.Conditions, ref newSound);
                         }
 
                         if (vl.VoiceConversation != 0) {

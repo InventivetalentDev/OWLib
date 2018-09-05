@@ -67,10 +67,16 @@ namespace DataTool.DataModels {
         
         [DataMember]
         public teResourceGUID VoiceConversation;
+
+        public STU_C1A2DB26 Conditions;
+
+        public STUVoiceLineInstance STU;  // todo: ideally not here
         
         // todo: more fields and stuff.
         
         public VoiceLineInstance(STUVoiceLineInstance instance) {
+            STU = instance;
+            
             if (instance.m_AF226247 != null) {
                 var voiceSounds = new List<ulong>();
                 foreach (var soundFile in new[] {
@@ -85,7 +91,12 @@ namespace DataTool.DataModels {
             }
 
             if (instance.m_voiceLineRuntime != null) {
-                VoiceConversation = instance.m_voiceLineRuntime.m_voiceConversation;
+                if (instance.m_voiceLineRuntime.m_voiceConversation != null)
+                    VoiceConversation = instance.m_voiceLineRuntime.m_voiceConversation;
+
+                if (instance.m_voiceLineRuntime.m_4FF98D41 != null) {
+                    Conditions = instance.m_voiceLineRuntime.m_4FF98D41;
+                }
             }
         }
     }
