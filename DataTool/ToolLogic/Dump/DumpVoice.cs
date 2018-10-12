@@ -193,6 +193,8 @@ namespace DataTool.ToolLogic.Dump {
 
                         if (vl.VoiceConversation != 0) {
                             var conversation = GetInstance<STUVoiceConversation>(vl.VoiceConversation);
+
+                            if (conversation == null) continue; // wtf blizz
                             
                             newSound.Conversation = new Conversation {
                                 GUID = teResourceGUID.AsString(vl.VoiceConversation),
