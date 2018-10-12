@@ -19,12 +19,8 @@ using static DataTool.Helper.Logger;
 // ReSharper disable MemberCanBePrivate.Global
 
 namespace DataTool.ToolLogic.Dump {
-    [Tool("dump-voice", Description = "Dumps voice data", TrackTypes = new ushort[] { 0x75, 0x9F }, CustomFlags = typeof(DumpFlags))]
+    [Tool("dump-voice", Description = "Dumps voice data", CustomFlags = typeof(DumpFlags))]
     public class DumpVoice : JSONTool, ITool {
-        public void IntegrateView(object sender) {
-            throw new NotImplementedException();
-        }
-
         public class BaseCondition {
             [DataMember(Order = 0)]
             public STUCriteriaType CondType;
