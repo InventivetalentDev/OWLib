@@ -68,7 +68,7 @@ namespace DataTool.DataModels {
         [DataMember]
         public teResourceGUID VoiceConversation;
 
-        public STU_C1A2DB26 Conditions;
+        public STUCriteriaContainer Conditions;
 
         public STUVoiceLineInstance STU;  // todo: ideally not here
         
@@ -94,8 +94,8 @@ namespace DataTool.DataModels {
                 if (instance.m_voiceLineRuntime.m_voiceConversation != null)
                     VoiceConversation = instance.m_voiceLineRuntime.m_voiceConversation;
 
-                if (instance.m_voiceLineRuntime.m_4FF98D41 != null) {
-                    Conditions = instance.m_voiceLineRuntime.m_4FF98D41;
+                if (instance.m_voiceLineRuntime.m_criteria != null) {
+                    Conditions = instance.m_voiceLineRuntime.m_criteria;
                 }
             }
         }

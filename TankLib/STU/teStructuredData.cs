@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -142,15 +143,22 @@ namespace TankLib.STU {
                 //if (instanceHash == 0x05C7059E) {
                 //    Debugger.Break();
                 //}
-
+            #if RELEASE
                 try {
-                    Instances[i].Deserialize(this);
-                } catch { }
+            #endif
+                Instances[i].Deserialize(this);
+            #if RELEASE
+                } catch (Exception) {
+                    // ignored
+                }
+            #endif
 
                 //if (instanceHash == 0x05C7059E) {
                 //    Debugger.Break();
                 //}
             }
+
+            Instances[0].Usage = TypeUsage.Root;
         }
 
         /// <summary>Read a "Version2" STU asset</summary>

@@ -457,9 +457,13 @@ namespace DataTool.FindLogic {
                     STUEntityDefinition entityDefinition = GetInstance<STUEntityDefinition>(guid);
                     if (entityDefinition == null) break;
 
-                    EntityInfoNew entityInfo = new EntityInfoNew(guid);
-                    info.Entities[guid] = entityInfo;
-
+                    EntityInfoNew entityInfo;
+                    info.Entities.TryGetValue(guid, out entityInfo);
+                    if (entityInfo == null) {
+                        entityInfo = new EntityInfoNew(guid);
+                        info.Entities[guid] = entityInfo;
+                    }
+                    
                     ComboContext entityContext = context.Clone();
                     entityContext.Entity = guid;
 
@@ -566,6 +570,10 @@ namespace DataTool.FindLogic {
 
                     break;
                 case 0x6:
+                    if (guid == 720575940379302199) {
+                        
+                    }                   
+                    
                     if (info.Animations.ContainsKey(guid)) {
                         if (context.Model != 0) {
                             info.Models[context.Model].Animations.Add(guid);
@@ -694,9 +702,9 @@ namespace DataTool.FindLogic {
                                 if (!info.EntitiesByIdentifier.ContainsKey(entityControl.Header.Identifier)) continue;
                                 foreach (ulong ceceEntity in info.EntitiesByIdentifier[entityControl.Header.Identifier]) {
                                     EntityInfoNew ceceEntityInfo = info.Entities[ceceEntity];
-                                    ceceEntityInfo.Animations.Add(entityControl.Header.Animation);
+                                    ceceEntityInfo.Animations.Add(GetReplacement(entityControl.Header.Animation, replacements));
                                     if (ceceEntityInfo.Model != 0) {
-                                        info.Models[ceceEntityInfo.Model].Animations.Add(entityControl.Header.Animation);
+                                        info.Models[ceceEntityInfo.Model].Animations.Add(GetReplacement(entityControl.Header.Animation, replacements));
                                     }
                                 }
                             } else if (chunk.Value is teEffectComponentSound soundComponent) {
@@ -1035,9 +1043,9 @@ namespace DataTool.FindLogic {
                     teMaterialData materialData = new teMaterialData(OpenFile(guid));
                     if (materialData.Textures != null) {
                         materialDataInfo.Textures = new Dictionary<ulong, uint>();
-                        foreach (teMaterialDataTexture matDataTex in materialData.Textures) {
-                            Find(info, matDataTex.Texture, replacements, materialDataContext);
-                            materialDataInfo.Textures[matDataTex.Texture] = matDataTex.NameHash;
+                        foreach (teMaterialData.Texture matDataTex in materialData.Textures) {
+                            Find(info, matDataTex.TextureGUID, replacements, materialDataContext);
+                            materialDataInfo.Textures[matDataTex.TextureGUID] = matDataTex.NameHash;
                         }
                     }
                     

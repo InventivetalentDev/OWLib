@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using TankLib;
-using TankLib.CASC;
-using TankLib.CASC.Handlers;
 using static DataTool.Program;
 
 namespace DataTool.Helper {
@@ -76,6 +73,7 @@ namespace DataTool.Helper {
         }
 
         public static void WriteFile(ulong guid, string path) {
+            if (!TankHandler.Assets.ContainsKey(guid)) return;
             WriteFile(OpenFile(guid), guid, path);
         }
 
@@ -98,52 +96,11 @@ namespace DataTool.Helper {
             }
         }
         
-        public static Dictionary<MD5Hash, byte[]> BundleCache = new Dictionary<MD5Hash, byte[]>(new MD5HashComparer());
-        
-        public static Stream OpenFile(ApplicationPackageManifest.Types.PackageRecord record) {
-            if (!CASC.EncodingHandler.GetEntry(record.LoadHash, out EncodingEntry enc)) return null;
-
-            try {
-                if (record.Flags.HasFlag(ContentFlags.Bundle)) {
-                    if (!BundleCache.ContainsKey(record.LoadHash)) {
-                        using (Stream bundleStream = CASC.OpenFile(enc.Key)) {
-                            byte[] buf = new byte[bundleStream.Length];
-                            bundleStream.Read(buf, 0, (int)bundleStream.Length);
-                            BundleCache[record.LoadHash] = buf;
-                        }
-                    }
-                    MemoryStream stream = new MemoryStream((int)record.Size);
-                    stream.Write(BundleCache[record.LoadHash], (int)record.Offset, (int)record.Size);
-                    stream.Position = 0;
-                    return stream;
-                }
-                return CASC.OpenFile(enc.Key);
-            } catch (Exception e) {
-                if (e is BLTEKeyException exception) {
-#if DEBUG
-                    Debugger.Log(0, "DataTool", $"[DataTool:CASC]: Missing key: {exception.MissingKey:X16}\r\n");
-#endif
-                }
-
-                return null;
-            }
-        }
-        
-        public static Stream OpenFileUnsafe(ApplicationPackageManifest.Types.PackageRecord record, out ulong salsa) {
-            salsa = 0;
-            if (!CASC.EncodingHandler.GetEntry(record.LoadHash, out EncodingEntry enc)) return null;
-            
-            Stream fstream = CASC.OpenFile(enc.Key);
-            salsa = ((BLTEStream) fstream).SalsaKey;
-
-            return fstream;
-        }
-        
         public static Stream OpenFile(ulong guid) {
             try {
-                return OpenFile(Files[guid]);
-            }
-            catch {
+                return TankHandler.OpenFile(guid);
+            } catch (Exception) {
+                TankLib.Helpers.Logger.Debug("Core", $"Unable to load file: {guid:X8}");
                 return null;
             }
         }
@@ -171,7 +128,7 @@ namespace DataTool.Helper {
         public static string GetString(ulong guid) {
             if (guid == 0) return null;  // don't even try
             try {
-                using (Stream stream = OpenFile(Files[guid])) {
+                using (Stream stream = OpenFile(guid)) {
                     return stream == null ? null : new teString(stream);
                 }
             }
@@ -180,7 +137,7 @@ namespace DataTool.Helper {
             }
         }
 
-        public static void MapCMF() {
+        /*public static void MapCMF() {
             if (Root == null || CASC == null) {
                 return;
             }
@@ -212,6 +169,6 @@ namespace DataTool.Helper {
                     CMFMap[pair.Value.GUID] = apm.CMF.Map[pair.Value.GUID];
                 }
             }
-        }
+        }*/
     }
 }

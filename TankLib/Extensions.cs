@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using TankLib.Helpers;
 
@@ -150,18 +149,18 @@ namespace TankLib {
         #endregion
 
         #region Textures
-        public static TextureTypes.DDSPixelFormat ToPixelFormat(this TextureTypes.TextureType T) {
+        public static TextureTypes.DDSPixelFormat ToPixelFormat(this TextureTypes.TextureType type) {
             TextureTypes.DDSPixelFormat ret = new TextureTypes.DDSPixelFormat {
                 Size = 32,
                 Flags = 4,
-                FourCC = (uint)T,
+                FourCC = (uint)type,
                 BitCount = 32,
                 RedMask = 0x0000FF00,
                 GreenMask = 0x00FF0000,
                 BlueMask = 0xFF000000,
                 AlphaMask = 0x000000FF
             };
-            if (T == TextureTypes.TextureType.ATI2) {
+            if (type == TextureTypes.TextureType.ATI2) {
                 ret.Flags |= 0x80000000;
             }
             return ret;

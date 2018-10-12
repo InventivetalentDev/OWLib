@@ -1,12 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.Serialization;
-using DataTool.JSON;
 using TankLib;
 using TankLib.Math;
-using TankLib.STU;
 using TankLib.STU.Types;
 using TankLib.STU.Types.Enums;
-using Utf8Json;
 using static DataTool.Helper.IO;
 using static DataTool.Helper.STUHelper;
 
@@ -34,7 +31,7 @@ namespace DataTool.DataModels {
         public Hero(STUHero hero) {
             Name = GetString(hero.m_0EDCE350);
             Description = GetDescriptionString(hero.m_3446F580);
-            Gender = hero.Gender;
+            Gender = hero.m_gender;
             
             GalleryColor = hero.m_heroColor;
 

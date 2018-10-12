@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 
 namespace TankLib {
@@ -31,14 +30,35 @@ namespace TankLib {
             public uint Unknown5;
         }
 
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        public struct Unknown {
+            public ulong A;
+            public ulong B;
+        }
+
+        /// <summary>MaterialData Texture</summary>
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        public struct Texture {
+            /// <summary>Texture GUID</summary>
+            /// <remarks>File type 004</remarks>
+            public teResourceGUID TextureGUID;
+        
+            /// <summary>CRC32 of input name</summary>
+            /// <remarks>Matches up on teShaderInstance</remarks>
+            public uint NameHash;
+        
+            /// <summary>Unknown flags</summary>
+            public byte Flags;
+        }
+
         /// <summary>Header data</summary>
         public MatDataHeader Header;
         
         /// <summary>Texture definitions</summary>
-        public teMaterialDataTexture[] Textures;
+        public Texture[] Textures;
         
         /// <summary>Unknown definitions</summary>
-        public teMaterialDataUnknown[] Unknowns;
+        public Unknown[] Unknowns;
 
         /// <summary>Constant buffer definitions</summary>
         public teMaterialDataStaticInput[] StaticInputs;
@@ -50,15 +70,16 @@ namespace TankLib {
 
                 if (Header.TextureOffset > 0) {
                     reader.BaseStream.Position = Header.TextureOffset;
-                    
-                    Textures = reader.ReadArray<teMaterialDataTexture>(Header.TextureCount);
+
+                    Textures = reader.ReadArray<Texture>(Header.TextureCount);
                 }
 
                 if (Header.Offset4 > 0) {
                     reader.BaseStream.Position = Header.Offset4;
 
-                    Unknowns = reader.ReadArray<teMaterialDataUnknown>(Header.Offset4Count);
+                    Unknowns = reader.ReadArray<Unknown>(Header.Offset4Count);
                 }
+
                 if (Header.StaticInputsOffset > 0) {
                     reader.BaseStream.Position = Header.StaticInputsOffset;
                     StaticInputs = new teMaterialDataStaticInput[Header.StaticInputCount];
@@ -69,9 +90,9 @@ namespace TankLib {
             }
         }
 
-        public teMaterialDataTexture GetTexture(uint hash) {
+        public Texture GetTexture(uint hash) {
             if (Textures == null) return default;
-            foreach (teMaterialDataTexture texture in Textures) {
+            foreach (Texture texture in Textures) {
                 if (texture.NameHash == hash) {
                     return texture;
                 }
@@ -84,60 +105,25 @@ namespace TankLib {
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct HeaderData {
             public uint Hash;
-            public TestByteFlags Flags;
-            public byte Size;
+            public Type Flags;
+            public byte Count;
             public short Unknown;
         }
+
+        public enum Type : byte {
+            
+        }
+
+        public static readonly int[] Sizes = {0, 4, 4, 4, 4, 4, 4, 8, 8, 0xC, 0x10, 0x10, 0x24, 0x30};
 
         public HeaderData Header;
         public byte[] Data;
 
         public teMaterialDataStaticInput(BinaryReader reader) {
             Header = reader.Read<HeaderData>();
-            int size = Header.Size;
-            byte intFlags = (byte) Header.Flags;
-
-            // todo: actually use the damn flags
-            if (intFlags == 10) { // F00000002, F00000008
-                size *= 16;
-            } else if (intFlags == 8) { // F00000008
-                size *= 8;
-            } else if (intFlags == 11) { // F00000001, F00000002, F00000008
-                size *= 16;
-            } else if (intFlags == 3) { // F00000001, F00000002
-                size *= 4;
-            } else if (intFlags == 2) { // F00000002
-                size *= 4;
-            } else if (intFlags == 6) { // F00000002, F00000004
-                size *= 4;
-            } else if (intFlags == 9) { // F00000001, F00000008
-                size *= 12;
-            } else {
-                throw new Exception($"teMaterialDataStaticInput: Unsure how much to read for data ({intFlags}, flags: {Header.Flags}, offset: {reader.BaseStream.Position})");
-            }
-
-            Data = reader.ReadBytes(size);
+            
+            byte idx = (byte) Header.Flags;
+            Data = reader.ReadBytes(Header.Count * Sizes[idx]);
         }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    public struct teMaterialDataUnknown {
-        public ulong A;
-        public ulong B;
-    }
-
-    /// <summary>MaterialData Texture</summary>
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    public struct teMaterialDataTexture {
-        /// <summary>Texture GUID</summary>
-        /// <remarks>File type 004</remarks>
-        public teResourceGUID Texture;
-        
-        /// <summary>CRC32 of input name</summary>
-        /// <remarks>Matches up on teShaderInstance</remarks>
-        public uint NameHash;
-        
-        /// <summary>Unknown flags</summary>
-        public byte Flags;
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using static TankLib.Helpers.ConsoleSwatch;
 // ReSharper disable UnusedMember.Local
 
@@ -21,8 +22,14 @@ namespace TankLib.Helpers {
             if (UseColor) {
                 Console.ForegroundColor = color;
             }
+            
 
             string output = message;
+
+            if (arg.Length > 0) {
+                output = string.Format(message, arg);
+            }
+
             if (!string.IsNullOrWhiteSpace(category)) {
                 output = $"[{category}] {output}";
             }
@@ -31,9 +38,6 @@ namespace TankLib.Helpers {
                 output = $"{DateTime.Now.ToLocalTime().ToLongTimeString()} {output}";
             }
 
-            if (arg.Length > 0) {
-                writer.Write(output, arg);
-            }
             writer.Write(output);
             
             if (UseColor) {
@@ -107,6 +111,11 @@ namespace TankLib.Helpers {
             }
 
             string output = message;
+
+            if (arg.Length > 0) {
+                output = string.Format(message, arg);
+            }
+
             if (!string.IsNullOrWhiteSpace(category)) {
                 output = $"[{category}] {output}";
             }
@@ -115,9 +124,6 @@ namespace TankLib.Helpers {
                 output = $"{DateTime.Now.ToLocalTime().ToLongTimeString()} {output}";
             }
 
-            if (arg.Length > 0) {
-                writer.Write(output, arg);
-            }
             writer.Write(output);
 
             if (UseColor && (!string.IsNullOrWhiteSpace(foreground) || !string.IsNullOrWhiteSpace(background))) {
@@ -152,6 +158,32 @@ namespace TankLib.Helpers {
 
         public static void Error(string category, string message, params object[] arg) {
             Log(ConsoleColor.Red, true, true, category, message, arg);
+        }
+        
+        public static string ReadLine(TextWriter writer, bool @private) {
+            StringBuilder builder = new StringBuilder();
+            ConsoleKeyInfo ch;
+            while ((ch = Console.ReadKey(true)).Key != ConsoleKey.Enter) {
+                if (ch.Key == ConsoleKey.Backspace) {
+                    if (builder.Length > 0) {
+                        if (!@private) {
+                            writer.Write(ch.KeyChar);
+                            writer.Write(" ");
+                            writer.Write(ch.KeyChar);
+                        }
+                        
+                        builder.Remove(builder.Length - 1, 1);
+                    } else {
+                        Console.Beep();
+                    }
+                } else {
+                    builder.Append(ch.KeyChar);
+                    
+                    if (!@private) writer.Write(ch.KeyChar);
+                }
+            }
+            writer.WriteLine();
+            return builder.ToString();
         }
     }
 }

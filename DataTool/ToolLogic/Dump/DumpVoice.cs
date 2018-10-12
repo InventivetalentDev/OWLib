@@ -27,7 +27,7 @@ namespace DataTool.ToolLogic.Dump {
 
         public class BaseCondition {
             [DataMember(Order = 0)]
-            public Enum_1AA009C2 CondType;
+            public STUCriteriaType CondType;
             
             public string Map;
             public string Hero;
@@ -42,11 +42,11 @@ namespace DataTool.ToolLogic.Dump {
             [IgnoreDataMember]
             public ulong Key;
             
-            public bool ShouldSerializeMap() => CondType == Enum_1AA009C2.MapCond;
-            public bool ShouldSerializeHero() => CondType == Enum_1AA009C2.HeroCond;
-            public bool ShouldSerializeTeam() => CondType == Enum_1AA009C2.TeamCond;
-            public bool ShouldSerializeGender() => CondType == Enum_1AA009C2.GenderCond || CondType == Enum_1AA009C2.LanguageGenderCond;
-            public bool ShouldSerializeCelebration() => CondType == Enum_1AA009C2.CelebrationCond || CondType == Enum_1AA009C2.CelebrationCond2;
+            public bool ShouldSerializeMap() => CondType == STUCriteriaType.MapCond;
+            public bool ShouldSerializeHero() => CondType == STUCriteriaType.HeroCond;
+            public bool ShouldSerializeTeam() => CondType == STUCriteriaType.TeamCond;
+            public bool ShouldSerializeGender() => CondType == STUCriteriaType.GenderCond || CondType == STUCriteriaType.LanguageGenderCond;
+            public bool ShouldSerializeCelebration() => CondType == STUCriteriaType.CelebrationCond || CondType == STUCriteriaType.CelebrationCond2;
             public bool ShouldSerializeVirtual0C1() => Virtual0C1 != null;
             public bool ShouldSerializeVirtual0C3() => Virtual0C3 != null;
             public bool ShouldSerializeVirtual01C() => Virtual01C != null;
@@ -220,17 +220,17 @@ namespace DataTool.ToolLogic.Dump {
             return true;
         }
         
-        private static ConditionsContainer ParseConditions(STU_C1A2DB26 condition, ref SoundInfo newSound) {
+        private static ConditionsContainer ParseConditions(STUCriteriaContainer condition, ref SoundInfo newSound) {
             var @return = new ConditionsContainer {
                 Required = 1,
                 Requirements = new List<BaseCondition>()
             };
 
             if (!(condition is STU_32A19631 cond2)) return null;
-            var subCond = cond2.m_4FF98D41;                
+            var subCond = cond2.m_criteria;                
 
             switch (subCond) {
-                case STU_E9DB72FF mapCond:
+                case STUCriteria_OnMap mapCond:
                     @return.Requirements.Add(new BaseCondition{ CondType = mapCond.m_type, Map = MapNames[teResourceGUID.Index(mapCond.m_map)]});
                     break;
                 case STU_D815520F heroCond:
@@ -253,22 +253,22 @@ namespace DataTool.ToolLogic.Dump {
                     });
                     break;
                 // Cond depends on Virtual 01Cs
-                case STU_D0364821 virtualCond:
+                case STUCriteria_Statescript virtualCond:
                     @return.Requirements.Add(new BaseCondition {
                         CondType = virtualCond.m_type,
                         Virtual01C = teResourceGUID.AsString(virtualCond.m_identifier),
                         Key = virtualCond.m_identifier.GUID
                     });
                     break;
-                case STU_BDD783B9 teamCond:
+                case STUCriteria_Team teamCond:
                     @return.Requirements.Add(new BaseCondition{ CondType = teamCond.m_type, Team = teamCond.m_team });
                     break;
                 case STU_7C69EA0F multiCond:
                     @return.Required = (int) multiCond.m_amount; // Override the default requirement
 
                     // This condition is basically a wrapper of multiple sub conditions that follow the same format as a normal condition.
-                    if (multiCond.m_4FF98D41 != null) {
-                        foreach (var cond in multiCond.m_4FF98D41) {
+                    if (multiCond.m_criteria != null) {
+                        foreach (var cond in multiCond.m_criteria) {
                             if (cond is STU_32A19631) {
                                 var conditions = ParseConditions(cond, ref newSound);
                                 if (conditions != null)
@@ -283,13 +283,13 @@ namespace DataTool.ToolLogic.Dump {
                 case STU_A95E4B99 genderCond:
                     @return.Requirements.Add(new BaseCondition {
                         CondType = genderCond.m_type,
-                        Gender = genderCond.m_7D88A63A
+                        Gender = genderCond.m_gender
                     });
                     break;
                 case STU_C9F4617F genderCond2:
                     @return.Requirements.Add(new BaseCondition {
                         CondType = genderCond2.m_type,
-                        Gender = genderCond2.m_7D88A63A
+                        Gender = genderCond2.m_gender
                     });
                     break;
                 default:

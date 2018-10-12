@@ -1,4 +1,4 @@
-version: 1.27.0.{build}
+version: 1.29.0.{build}
 image: Visual Studio 2017
 configuration: Release
 platform: Any CPU
@@ -32,8 +32,8 @@ before_package:
 artifacts:
 - path: dist/Release
   name: toolchain-release
-- path: dist/Release/CMFLib.dll
-  name: CMFLib
+- path: dist/Release/TACTLib.dll
+  name: TACTLib
 - path: dist/Release/TankLib.dll
   name: TankLib
 - path: TankView/bin/Release
