@@ -33,7 +33,9 @@ namespace TankLib.STU.Types {
             {0xD80000000002168, "Christmas"},
             {0xD8000000000212E, "Halloween"},
             {0xD800000000024A6, "Valentines Day"},
+            {0xD800000000024A7, "Valentines Day 2"},
             {0xD80000000002658, "St. Patricks Day"},
+            {0xD80000000002659, "Easter"},
             // 0C3, not too sure how these are different to the ones above
             {0x430000000000029, "Halloween"},
             {0x430000000000013, "New Years Resolution"}
