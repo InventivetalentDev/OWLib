@@ -103,6 +103,10 @@ namespace DataTool.DataModels {
             return GetTypeName(unlock.GetType());
         }
 
+        public string GetTypeNameEnum() {
+            return STU.m_A7B393BF.ToString();
+        }
+
         public static string GetTypeName(Type type) {
             if (type == typeof(STUUnlock_SkinTheme)) {
                 return "Skin";

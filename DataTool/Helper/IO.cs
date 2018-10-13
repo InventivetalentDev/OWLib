@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using TankLib;
+using TACTLib.Core;
 using static DataTool.Program;
 
 namespace DataTool.Helper {
@@ -96,10 +99,17 @@ namespace DataTool.Helper {
             }
         }
         
+        public static HashSet<ulong> MissingKeyLog = new HashSet<ulong>();
+        
         public static Stream OpenFile(ulong guid) {
             try {
                 return TankHandler.OpenFile(guid);
-            } catch (Exception) {
+            } catch (Exception e) {
+                if (e is BLTEKeyException keyException) {
+                    if (MissingKeyLog.Add(keyException.MissingKey) && Debugger.IsAttached) {
+                        TankLib.Helpers.Logger.Warn("BLTE", $"Missing key: {keyException.MissingKey:X16}");
+                    }
+                }
                 TankLib.Helpers.Logger.Debug("Core", $"Unable to load file: {guid:X8}");
                 return null;
             }
