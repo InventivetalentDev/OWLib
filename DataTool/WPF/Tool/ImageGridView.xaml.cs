@@ -30,6 +30,10 @@ namespace DataTool.WPF.Tool {
         public void NotifyPropertyChanged(string name) {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+
+        private void SelectHandler(object sender, RoutedEventArgs @event) {
+            (ImageList.SelectedItem as ImageGridEntry)?.ClickRouter(ImageList.SelectedItem, @event);
+        }
     }
 
     public class ImageGridEntry {
@@ -42,6 +46,7 @@ namespace DataTool.WPF.Tool {
         public int ImageHeight { get; set; } = 128;
         public int Width { get; set; } = 128;
         public int Height { get; set; } = 152;
+        public Cursor Cursor { get; set; } = Cursors.Hand;
         
         public ImageGridEntry(string name, byte[] image) {
             Name = name;
