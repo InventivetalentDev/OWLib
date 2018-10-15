@@ -4,13 +4,47 @@
 namespace TankLib.STU.Types.Enums {
     [STUEnumAttribute(0x1AA009C2, "STUCriteriaType")]
     public enum STUCriteriaType : uint {
-        UnknownCond = 6, // ?? Lots of random stuff, pain sounds, enemy coming from X sounds, event interactions/sounds
-        MapCond = 7,
-        TeamCond = 9,
-        HeroCond = 11,
-        CelebrationCond2 = 14, // Hardly used? 15 seems to be the main Celebration condition, unsure how this one relates.
-        CelebrationCond = 15,
-        LanguageGenderCond = 16, // Same as a gender cond however seems to be for voicelines that aren't in english
-        GenderCond = 17
+        [STUFieldAttribute(0x5D059AD2)]
+        x5D059AD2 = 0x0,
+        [STUFieldAttribute(0x5EB2C1EF)]
+        x5EB2C1EF = 0x1,
+        [STUFieldAttribute(0x83CE99D0)]
+        x83CE99D0 = 0x2,
+        [STUFieldAttribute(0xF1FEB10A)]
+        xF1FEB10A = 0x3,
+        [STUFieldAttribute(0xAA33AAF5)]
+        xAA33AAF5 = 0x4,
+        [STUFieldAttribute(0x0E80DBC2)]
+        x0E80DBC2 = 0x5,
+        [STUFieldAttribute(0x59F9618F)]
+        UnknownCond = 0x6, // ?? Lots of random stuff, pain sounds, enemy coming from X sounds, event interactions/sounds
+        [STUFieldAttribute(0x93F52F1D)]
+        MapCond = 0x7,
+        [STUFieldAttribute(0x3352C54D)]
+        x3352C54D = 0x8,
+        [STUFieldAttribute(0x80584C68)]
+        TeamCond = 0x9,
+        [STUFieldAttribute(0x1CC4D15A)]
+        x1CC4D15A = 0xA,
+        [STUFieldAttribute(0x65455AEB)]
+        HeroCond = 0xB,
+        [STUFieldAttribute(0x26A104E3)]
+        x26A104E3 = 0xC,
+        [STUFieldAttribute(0x44248B9F)]
+        x44248B9F = 0xD,
+        [STUFieldAttribute(0x3388E117)]
+        CelebrationCond2 = 0xE, // Hardly used? 15 seems to be the main Celebration condition, unsure how this one relates.
+        [STUFieldAttribute(0x1B1E736A)]
+        CelebrationCond = 0xF,
+        [STUFieldAttribute(0x75D9579A)]
+        LanguageGenderCond = 0x10, // Same as a gender cond however seems to be for voicelines that aren't in english(??? Zenytatta has non english lines using this)
+        [STUFieldAttribute(0x5BCD4116)]
+        GenderCond = 0x11,
+        [STUFieldAttribute(0x5662D666)]
+        x5662D666 = 0x12,
+        [STUFieldAttribute(0x32067EC7)]
+        x32067EC7 = 0x13,
+        [STUFieldAttribute(0x60C4F17B)]
+        x60C4F17B = 0x14,
     }
 }
