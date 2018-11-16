@@ -181,37 +181,41 @@ namespace TankView.ViewModel {
         public GUIDCollection() { }
 
         public GUIDCollection(ClientHandler client, ProductHandler_Tank tank, ProgressWorker worker) {
-            this.Client = client;
-            this.Tank = tank;
-            this._worker = worker;
+            Client = client;
+            Tank = tank;
+            _worker = worker;
 
-            long total = tank.RootFiles.Length + tank.Manifests.Select(x => x.ContentManifest.HashList.Length).Sum();
+            int totalHashList = tank.Assets.Count;
+            long total = tank.RootFiles.Length + totalHashList;
 
             worker?.ReportProgress(0, "Building file tree...");
 
             long c = 0;
 
-            foreach (var entry in this.Tank.RootFiles.OrderBy(x => x.FileName).ToArray()) {
+            foreach (var entry in Tank.RootFiles.OrderBy(x => x.FileName).ToArray()) {
                 c++;
                 worker?.ReportProgress((int) (((float) c / (float) total) * 100));
                 AddEntry(entry.FileName, 0, entry.MD5, 0, "None");
             }
 
-            foreach (var manifest in this.Tank.Manifests) {
-                foreach (var record in manifest.ContentManifest.HashList) {
-                    c++;
-                    if (c % 10000 == 0) {
-                        worker?.ReportProgress((int) (((float) c / (float) total) * 100));
-                    }
+            if (totalHashList != default) {
+                foreach (ContentManifestFile contentManifest in new [] {Tank.MainContentManifest, Tank.SpeechContentManifest}) {
+                    foreach (var record in contentManifest.HashList) {
+                        c++;
+                        if (c % 10000 == 0) {
+                            worker?.ReportProgress((int) (((float) c / (float) total) * 100));
+                        }
 
-                    ushort typeVal = teResourceGUID.Type(record.GUID);
-                    string typeStr = typeVal.ToString("X3");
-                    DataHelper.DataType typeData = DataHelper.GetDataType(typeVal);
-                    if (typeData != DataHelper.DataType.Unknown) {
-                        typeStr = $"{typeStr} ({typeData.ToString()})";
-                    }
+                        ushort typeVal = teResourceGUID.Type(record.GUID);
+                        string typeStr = typeVal.ToString("X3");
+                        DataHelper.DataType typeData = DataHelper.GetDataType(typeVal);
+                        if (typeData != DataHelper.DataType.Unknown) {
+                            typeStr = $"{typeStr} ({typeData.ToString()})";
+                        }
 
-                    AddEntry($"files/{Path.GetFileNameWithoutExtension(manifest.Name)}/{typeStr}", record.GUID, record.ContentKey, (int)record.Size, "None");
+                        // todo: add cmf name again?
+                        AddEntry($"files/{typeStr}", record.GUID, record.ContentKey, (int) record.Size, "None");
+                    }
                 }
             }
 
