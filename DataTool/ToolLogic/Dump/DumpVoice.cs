@@ -38,14 +38,14 @@ namespace DataTool.ToolLogic.Dump {
             [IgnoreDataMember]
             public ulong Key;
             
-            //public bool ShouldSerializeMap() => CondType == STUCriteriaType.MapCond;
-            //public bool ShouldSerializeHero() => CondType == STUCriteriaType.HeroCond;
-            //public bool ShouldSerializeTeam() => CondType == STUCriteriaType.TeamCond;
-            //public bool ShouldSerializeGender() => CondType == STUCriteriaType.GenderCond || CondType == STUCriteriaType.LanguageGenderCond;
-            //public bool ShouldSerializeCelebration() => CondType == STUCriteriaType.CelebrationCond || CondType == STUCriteriaType.CelebrationCond2;
-            //public bool ShouldSerializeVirtual0C1() => Virtual0C1 != null;
-            //public bool ShouldSerializeVirtual0C3() => Virtual0C3 != null;
-            //public bool ShouldSerializeVirtual01C() => Virtual01C != null;
+            public bool ShouldSerializeMap() => CondType == STUCriteriaType.MapCond;
+            public bool ShouldSerializeHero() => CondType == STUCriteriaType.HeroCond;
+            public bool ShouldSerializeTeam() => CondType == STUCriteriaType.TeamCond;
+            public bool ShouldSerializeGender() => CondType == STUCriteriaType.GenderCond || CondType == STUCriteriaType.LanguageGenderCond;
+            public bool ShouldSerializeCelebration() => CondType == STUCriteriaType.CelebrationCond || CondType == STUCriteriaType.CelebrationCond2;
+            public bool ShouldSerializeVirtual0C1() => Virtual0C1 != null;
+            public bool ShouldSerializeVirtual0C3() => Virtual0C3 != null;
+            public bool ShouldSerializeVirtual01C() => Virtual01C != null;
             
             [IgnoreDataMember]
             public int m_07D0F7AA;
@@ -130,8 +130,6 @@ namespace DataTool.ToolLogic.Dump {
                             ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo);
                     }
                 }
-
-                break;
             }
 
             OutputJSON(
