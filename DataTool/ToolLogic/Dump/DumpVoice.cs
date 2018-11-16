@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using DataTool.JSON;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -9,6 +8,7 @@ using DataTool.SaveLogic.Unlock;
 using static DataTool.Program;
 using static DataTool.Helper.STUHelper;
 using TankLib;
+using TankLib.STU;
 using TankLib.STU.Types;
 using TankLib.STU.Types.Enums;
 using Combo = DataTool.FindLogic.Combo;
@@ -27,7 +27,7 @@ namespace DataTool.ToolLogic.Dump {
             
             public string Map;
             public string Hero;
-            public TeamIndex Team;
+            public TeamIndexFuckYou Team;
             public Enum_0C014B4A Gender;
             public string Celebration;
 
@@ -38,14 +38,14 @@ namespace DataTool.ToolLogic.Dump {
             [IgnoreDataMember]
             public ulong Key;
             
-            public bool ShouldSerializeMap() => CondType == STUCriteriaType.MapCond;
-            public bool ShouldSerializeHero() => CondType == STUCriteriaType.HeroCond;
-            public bool ShouldSerializeTeam() => CondType == STUCriteriaType.TeamCond;
-            public bool ShouldSerializeGender() => CondType == STUCriteriaType.GenderCond || CondType == STUCriteriaType.LanguageGenderCond;
-            public bool ShouldSerializeCelebration() => CondType == STUCriteriaType.CelebrationCond || CondType == STUCriteriaType.CelebrationCond2;
-            public bool ShouldSerializeVirtual0C1() => Virtual0C1 != null;
-            public bool ShouldSerializeVirtual0C3() => Virtual0C3 != null;
-            public bool ShouldSerializeVirtual01C() => Virtual01C != null;
+            //public bool ShouldSerializeMap() => CondType == STUCriteriaType.MapCond;
+            //public bool ShouldSerializeHero() => CondType == STUCriteriaType.HeroCond;
+            //public bool ShouldSerializeTeam() => CondType == STUCriteriaType.TeamCond;
+            //public bool ShouldSerializeGender() => CondType == STUCriteriaType.GenderCond || CondType == STUCriteriaType.LanguageGenderCond;
+            //public bool ShouldSerializeCelebration() => CondType == STUCriteriaType.CelebrationCond || CondType == STUCriteriaType.CelebrationCond2;
+            //public bool ShouldSerializeVirtual0C1() => Virtual0C1 != null;
+            //public bool ShouldSerializeVirtual0C3() => Virtual0C3 != null;
+            //public bool ShouldSerializeVirtual01C() => Virtual01C != null;
             
             [IgnoreDataMember]
             public int m_07D0F7AA;
@@ -53,6 +53,11 @@ namespace DataTool.ToolLogic.Dump {
             public ulong m_A20DCD80;
             [IgnoreDataMember]
             public Enum_AB6CE3D1 m_967A138B;
+        }
+
+        public enum TeamIndexFuckYou {
+            Defending = 0x0, // TeamBlue
+            Attacking = 0x1, // TeamRed
         }
 
         public class Conversation {
@@ -125,6 +130,8 @@ namespace DataTool.ToolLogic.Dump {
                             ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo);
                     }
                 }
+
+                break;
             }
 
             OutputJSON(
@@ -259,7 +266,7 @@ namespace DataTool.ToolLogic.Dump {
                     });
                     break;
                 case STUCriteria_Team teamCond:
-                    @return.Requirements.Add(new BaseCondition{ CondType = teamCond.m_type, Team = teamCond.m_team });
+                    @return.Requirements.Add(new BaseCondition{ CondType = teamCond.m_type, Team = (TeamIndexFuckYou)teamCond.m_team });
                     break;
                 case STU_7C69EA0F multiCond:
                     @return.Required = (int) multiCond.m_amount; // Override the default requirement
