@@ -205,6 +205,7 @@ namespace DataTool.ToolLogic.Dump {
                     }
 
                     foreach (var sound in voiceLineInstance.SoundFiles) {
+                        if (sound == 0) continue;
                         newSound.GUID = sound;
                         newSound.SoundFile = teResourceGUID.AsString(sound);
 
