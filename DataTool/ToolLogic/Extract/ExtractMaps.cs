@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using DataTool.DataModels;
 using DataTool.Flag;
 using DataTool.Helper;
@@ -59,6 +60,26 @@ namespace DataTool.ToolLogic.Extract {
         }
 
         public List<QueryType> QueryTypes => new List<QueryType> {new QueryType {Name = "MapFakeType"}};
-        public Dictionary<string, string> QueryNameOverrides => new Dictionary<string, string>();
+        
+        [SuppressMessage("ReSharper", "StringLiteralTypo")]
+        public static readonly Dictionary<string, string> MapMapping = new Dictionary<string, string> {
+                                                                                                          ["horizon"] = "horizon lunar colony",
+                                                                                                          ["moon"] = "horizon lunar colony",
+                                                                                                          ["hlc"] = "horizon lunar colony",
+                                                                                                          ["anubis"] = "temple of anubis",
+                                                                                                          ["gibraltar"] = "watchpoint: gibraltar",
+                                                                                                          ["watchpoint"] = "watchpoint: gibraltar",
+                                                                                                          ["watchpoint gibraltar"] = "watchpoint: gibraltar",
+                                                                                                          ["lijiang"] = "lijiang tower",
+                                                                                                          ["estadio das ras"] = "estádio das rãs",
+                                                                                                          ["chateau guillard"] = "château guillard",
+                                                                                                          ["ecopoint"] = "ecopoint: antarctica",
+                                                                                                          ["antarctica"] = "ecopoint: antarctica",
+                                                                                                          ["ecopoint antarctica"] = "ecopoint: antarctica",
+                                                                                                          ["volskaya"] = "volskaya industries",
+                                                                                                          ["kings row"] = "king's row",
+                                                                                                      };
+
+        public Dictionary<string, string> QueryNameOverrides => MapMapping;
     }
 }
