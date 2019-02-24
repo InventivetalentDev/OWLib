@@ -9,7 +9,10 @@ namespace DataTool.DataModels {
     [DataContract]
     public class GameMode {
         [DataMember]
-        public string DisplayName;
+        public teResourceGUID GUID;
+        
+        [DataMember]
+        public string Name;
         
         [DataMember]
         public string InternalName;
@@ -24,7 +27,8 @@ namespace DataTool.DataModels {
         public teResourceGUID VoiceSet;
         
         public GameMode(STUGameMode gameMode, ulong key) {
-            DisplayName = GetString(gameMode.m_displayName);
+            GUID = (teResourceGUID) key;
+            Name = GetString(gameMode.m_displayName);
             InternalName = GetInternalName(key);
 
             GameRulesetSchemas = Helper.JSON.FixArray(gameMode.m_gameRulesetSchemas);
@@ -33,7 +37,7 @@ namespace DataTool.DataModels {
             Type = gameMode.m_gameModeType;
         }
         
-        private string GetInternalName(ulong key) {
+        private static string GetInternalName(ulong key) {
             InternalGamemodeNames.TryGetValue(key, out string gamemode);
             return gamemode ?? $"UNKNOWN {teResourceGUID.AsString(key)}";
         }
