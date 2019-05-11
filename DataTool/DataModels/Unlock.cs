@@ -15,6 +15,9 @@ namespace DataTool.DataModels {
     /// </summary>
     [DataContract]
     public class Unlock {
+        [DataMember]
+        public teResourceGUID GUID;
+        
         /// <summary>
         /// Name of this unlock
         /// </summary>
@@ -53,14 +56,28 @@ namespace DataTool.DataModels {
         [IgnoreDataMember]
         public STUUnlock STU;
 
-        [DataMember]
-        public teResourceGUID GUID;
-
         /// <summary>
         /// DataTool specific Unlock Data Tag
         /// </summary>
         [DataMember]
         public string Tag;
+
+        [DataMember]
+        public int CompetitiveCurrency;
+
+        [DataMember]
+        public Enum_BABC4175 LootBoxType;
+
+        [IgnoreDataMember]
+        public bool IsTraditionalUnlock;
+        
+        // These types are specific to certain unlocks so don't show them unless we're on unlock
+        public bool ShouldSerializeCompetitiveCurrency() => Type == "CompetitiveCurrency";
+        public bool ShouldSerializeLootBoxType() => Type == "LootBox";
+        
+        // These only really apply to "normal" unlocks and can be removed from others
+        public bool ShouldSerializeAvailableIn() => IsTraditionalUnlock;
+        public bool ShouldSerializeTag() => IsTraditionalUnlock;
 
         public Unlock(STUUnlock unlock, ulong guid) {
             Init(unlock, guid);
@@ -73,17 +90,27 @@ namespace DataTool.DataModels {
         }
 
         private void Init(STUUnlock unlock, ulong guid) {
+            GUID = (teResourceGUID) guid;
+            STU = unlock;
+            
             Name = GetString(unlock.m_name)?.TrimEnd(' '); // ffs blizz, why do the names end in a space sometimes
             AvailableIn = GetString(unlock.m_53145FAF);
             Rarity = unlock.m_rarity;
             Description = GetDescriptionString(unlock.m_3446F580);
-
-            GUID = (teResourceGUID)guid;
-            STU = unlock;
-
             Type = GetTypeName(unlock);
-
             Tag = UnlockData.GetTagFor(guid);
+
+            // todo: maybe Type should be an enum??
+            IsTraditionalUnlock = Type != "LootBox" && Type != "CompetitiveCurrency" && Type != "Currency";
+            
+            // Lootbox and competitive point unlocks have some additional relevant data
+            if (unlock is STUUnlock_CompetitiveCurrency compStu)
+                CompetitiveCurrency = compStu.m_760BF18E;
+
+            if (unlock is STUUnlock_LootBox lootboxStu) {
+                Rarity = lootboxStu.m_2F922165;
+                LootBoxType = lootboxStu.m_lootboxType;
+            }
         }
 
         public string GetName(bool isList = false) {
@@ -140,6 +167,12 @@ namespace DataTool.DataModels {
             }
             if (type == typeof(STUUnlock_HeroMod)) {
                 return "HeroMod";  // wtf
+            }
+            if (type == typeof(STUUnlock_CompetitiveCurrency)) {
+                return "CompetitiveCurrency";
+            }
+            if (type == typeof(STUUnlock_LootBox)) {
+                return "LootBox";
             }
 
             throw new NotImplementedException($"Unknown Unlock Type: {type}");
