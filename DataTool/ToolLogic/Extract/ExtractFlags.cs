@@ -46,11 +46,23 @@ namespace DataTool.ToolLogic.Extract {
         [CLIFlag(Default = (byte)1, Flag = "lod", Help = "Force extracted model LOD", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagByte" })]
         public byte LOD;
         
-        [CLIFlag(Default = true, Flag = "scale-anims", Help = "set to true for Blender 2.79, false for Maya and when Blender SEAnim tools are updated for 2.8", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBooleanInv" })]
+        [CLIFlag(Default = false, Flag = "scale-anims", Help = "set to true for Blender 2.79, false for Maya and when Blender SEAnim tools are updated for 2.8", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool ScaleAnims;
 
         [CLIFlag(Default = false, Flag = "flatten", Help = "Flatten directory structure", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool FlattenDirectory;
+
+        [CLIFlag(Default = false, Flag = "force-dds-multisurface", Help = "Save multisurface textures as DDS", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool ForceDDSMultiSurface;
+
+        [CLIFlag(Default = false, Flag = "sheet-multisurface", Help = "Save multisurface textures as one large image, tiled across in the Y (vertical) direction", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool SheetMultiSurface;
+
+        [CLIFlag(Default = false, Flag = "flatten-multisurface", Help = "Convert multisurface textures to target type", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool DestroyMultiSurface;
+
+        [CLIFlag(Default = false, Flag = "extract-mips", Help = "Extract mip files", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool SaveMips;
 
         // [CLIFlag(Default = false, Flag = "convert-bnk", Help = "Convert .bnk files to .wem", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         // public bool ConvertBnk;
