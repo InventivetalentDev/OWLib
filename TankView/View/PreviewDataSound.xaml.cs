@@ -32,7 +32,7 @@ namespace TankView.View {
             _progressWorker.OnProgress += UpdateProgress;
             
             var timer = new System.Timers.Timer();
-            timer.Interval = 300;
+            timer.Interval = 150;
             timer.Elapsed += Timer_Elapsed;
             timer.Start();
         }
@@ -78,6 +78,10 @@ namespace TankView.View {
             }
 
             try {
+                if (outputDevice.PlaybackState == PlaybackState.Stopped) {
+                    vorbis.Position = 0;
+                }
+                
                 outputDevice.Play();
             } catch (Exception ex) {
                 Debugger.Log(0, "[TankView.Sound.Play]", $"Error setting audio! {ex.Message}\n");

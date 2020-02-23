@@ -9,6 +9,7 @@ using DataTool.ConvertLogic;
 using DataTool.Flag;
 using DataTool.Helper;
 using DataTool.ToolLogic.Extract;
+using NUnit.Framework.Constraints;
 using TankLib;
 using TankLib.ExportFormats;
 using static DataTool.Helper.IO;
@@ -29,37 +30,42 @@ namespace DataTool.SaveLogic {
             }
         }
 
-        public static void SaveVoiceStimulus(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info,
-            FindLogic.Combo.VoiceLineInstanceInfo voiceLineInstanceInfo) {
+        public static void SaveVoiceStimulus(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, FindLogic.Combo.VoiceLineInstanceInfo voiceLineInstanceInfo) {
+            var saveSubtitles = true;
 
+            if (flags is ExtractFlags extractFlags) {
+                saveSubtitles = extractFlags.SubtitlesWithSounds;
+            }
             var realPath = path;
-            IEnumerable<string> subtitle = new HashSet<string>();
-
-            if (info.Subtitles.TryGetValue(voiceLineInstanceInfo.Subtitle, out var subtitleInfo)) {
-                subtitle = subtitle.Concat(subtitleInfo.Text);
-            }
-
-            if (info.Subtitles.TryGetValue(voiceLineInstanceInfo.SubtitleRuntime, out var subtitleRuntimeInfo)) {
-                subtitle = subtitle.Concat(subtitleRuntimeInfo.Text);
-            }
-            
-            var subtitleSet = new HashSet<string>(subtitle);
             var soundSet = new HashSet<ulong>(voiceLineInstanceInfo.SoundFiles.Where(x => x != 0));
-
             string overrideName = null;
 
-            if (subtitleSet.Any()) {
-                if (soundSet.Count > 1) {
-                    realPath = Path.Combine(realPath, IO.GetValidFilename(subtitleSet.First().TrimEnd('.')));
-                    WriteFile(string.Join("\n", subtitleSet), Path.Combine(realPath, $"{teResourceGUID.LongKey(voiceLineInstanceInfo.Subtitle):X8}-{teResourceGUID.LongKey(voiceLineInstanceInfo.SubtitleRuntime):X8}-subtitles.txt"));
-                } else if (soundSet.Count == 1) {
-                    try {
-                        overrideName = GetValidFilename($"{teResourceGUID.AsString(soundSet.First())}-{subtitleSet.First().TrimEnd('.')}");
-                        if (overrideName.Length > 128) overrideName = overrideName.Substring(0, 100);
-                        WriteFile(string.Join("\n", subtitleSet), Path.Combine(realPath, $"{overrideName}.txt"));
-                    } catch {
-                        overrideName = teResourceGUID.AsString(soundSet.First());
-                        WriteFile(string.Join("\n", subtitleSet), Path.Combine(realPath, $"{overrideName}.txt"));
+            if (saveSubtitles) {
+                IEnumerable<string> subtitle = new HashSet<string>();
+
+                if (info.Subtitles.TryGetValue(voiceLineInstanceInfo.Subtitle, out var subtitleInfo)) {
+                    subtitle = subtitle.Concat(subtitleInfo.Text);
+                }
+
+                if (info.Subtitles.TryGetValue(voiceLineInstanceInfo.SubtitleRuntime, out var subtitleRuntimeInfo)) {
+                    subtitle = subtitle.Concat(subtitleRuntimeInfo.Text);
+                }
+            
+                var subtitleSet = new HashSet<string>(subtitle);
+
+                if (subtitleSet.Any()) {
+                    if (soundSet.Count > 1) {
+                        realPath = Path.Combine(realPath, IO.GetValidFilename(subtitleSet.First().Trim().TrimEnd('.')));
+                        WriteFile(string.Join("\n", subtitleSet), Path.Combine(realPath, $"{teResourceGUID.LongKey(voiceLineInstanceInfo.Subtitle):X8}-{teResourceGUID.LongKey(voiceLineInstanceInfo.SubtitleRuntime):X8}-subtitles.txt"));
+                    } else if (soundSet.Count == 1) {
+                        try {
+                            overrideName = GetValidFilename($"{teResourceGUID.AsString(soundSet.First())}-{subtitleSet.First().TrimEnd('.')}");
+                            if (overrideName.Length > 128) overrideName = overrideName.Substring(0, 100);
+                            WriteFile(string.Join("\n", subtitleSet), Path.Combine(realPath, $"{overrideName}.txt"));
+                        } catch {
+                            overrideName = teResourceGUID.AsString(soundSet.First());
+                            WriteFile(string.Join("\n", subtitleSet), Path.Combine(realPath, $"{overrideName}.txt"));
+                        }
                     }
                 }
             }
@@ -110,12 +116,21 @@ namespace DataTool.SaveLogic {
         }
 
         private static void ConvertAnimation(Stream animStream, string path, bool convertAnims, FindLogic.Combo.AnimationInfoNew animationInfo, bool scaleAnims) {
-            teAnimation parsedAnimation = new teAnimation(animStream, true);
+            var parsedAnimation = default(teAnimation);
+            var priority = 100;
+            try
+            {
+                parsedAnimation = new teAnimation(animStream, true);
+                priority = parsedAnimation.Header.Priority;
+            }
+            catch
+            {
 
+            }
             string animationDirectory =
-                Path.Combine(path, "Animations", parsedAnimation.Header.Priority.ToString());
+                Path.Combine(path, "Animations", priority.ToString());
 
-            if (convertAnims) {
+            if (convertAnims && parsedAnimation != null) {
                 SEAnim seAnim = new SEAnim(parsedAnimation, scaleAnims);
                 string animOutput = Path.Combine(animationDirectory,
                     animationInfo.GetNameIndex() + "." + seAnim.Extension);
@@ -150,7 +165,7 @@ namespace DataTool.SaveLogic {
             bool scaleAnims = false;
             if (flags is ExtractFlags extractFlags) {
                 scaleAnims = extractFlags.ScaleAnims;
-                convertAnims = extractFlags.ConvertAnimations && !extractFlags.Raw;
+                convertAnims = !extractFlags.RawAnimations && !extractFlags.Raw;
                 if (extractFlags.SkipAnimations) return;
             }
             
@@ -213,6 +228,9 @@ namespace DataTool.SaveLogic {
         }
 
         public static void SaveSound(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, ulong sound) {
+            if (!info.Sounds.ContainsKey(sound))
+                return;
+
             FindLogic.Combo.SoundInfoNew soundInfo = info.Sounds[sound];
             string soundDir = Path.Combine(path, soundInfo.GetName());
             CreateDirectorySafe(soundDir);
@@ -271,7 +289,7 @@ namespace DataTool.SaveLogic {
             byte lod = 1;
 
             if (flags is ExtractFlags extractFlags) {
-                convertModels = extractFlags.ConvertModels  && !extractFlags.Raw;
+                convertModels = !extractFlags.RawModels  && !extractFlags.Raw;
                 doRefpose = extractFlags.ExtractRefpose;
                 lod = extractFlags.LOD;
                 if (extractFlags.SkipModels) return;
@@ -431,8 +449,24 @@ namespace DataTool.SaveLogic {
                     SaveTexture(flags, textureDirectory, info, texture.Key);
                 }
             }
+
+            if (Program.Flags.ExtractShaders && materialInfo.Shaders != null) {
+                SaveShader(path, materialInfo, info);
+            }
         }
-        
+
+        private static void SaveShader(string path, FindLogic.Combo.MaterialInfo materialInfo, FindLogic.Combo.ComboInfo info) {
+            string shaderDirectory = Path.Combine(path, "Shaders", $"{materialInfo.MaterialData:X16}");
+            //WriteFile(materialInfo.ShaderGroup, shaderDirectory);
+            //WriteFile(materialInfo.ShaderSource, shaderDirectory);
+            foreach (var (instance, code, byteCode) in materialInfo.Shaders) {
+                //var instancePath = Path.Combine(shaderDirectory, $"{instance:X12}");
+                //WriteFile(instance, instancePath);
+                //WriteFile(code, instancePath);
+                WriteFile(byteCode, Path.Combine(shaderDirectory, Path.ChangeExtension(teResourceGUID.AsString(code), "fxc")));
+            }
+        }
+
 
         // helpers (NOT FOR INTERNAL USE)
         public static void SaveAllVoiceSets(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo soundInfo) {
@@ -528,23 +562,21 @@ namespace DataTool.SaveLogic {
         public static void SaveTexture(ICLIFlags flags, string path, FindLogic.Combo.ComboInfo info, ulong textureGUID) {
             bool convertTextures = true;
             string convertType = "tif";
-            string multiSurfaceTarget = "tif";
-            bool flattenMultiSurface = false;
+            string multiSurfaceConvertType = "tif";
+            bool createMultiSurfaceSheet = false;
             bool lossless = false;
             int maxMips = 1;
 
             if (flags is ExtractFlags extractFlags) {
                 if (extractFlags.SkipTextures) return;
-                flattenMultiSurface = extractFlags.SheetMultiSurface;
-                convertTextures = extractFlags.ConvertTextures  && !extractFlags.Raw;
+                createMultiSurfaceSheet = extractFlags.SheetMultiSurface;
+                convertTextures = !extractFlags.RawTextures && !extractFlags.Raw;
                 convertType = extractFlags.ConvertTexturesType.ToLowerInvariant();
                 lossless = extractFlags.ConvertTexturesLossless;
-                if (extractFlags.ForceDDSMultiSurface || convertType == "dds") {
-                    multiSurfaceTarget = "dds";
-                }
-
-                if (extractFlags.DestroyMultiSurface) {
-                    multiSurfaceTarget = convertType;
+                
+                multiSurfaceConvertType = convertType;
+                if (extractFlags.ForceDDSMultiSurface) {
+                    multiSurfaceConvertType = "dds";
                 }
 
                 if (convertType == "dds" && extractFlags.SaveMips) {
@@ -555,6 +587,7 @@ namespace DataTool.SaveLogic {
 
             FindLogic.Combo.TextureInfoNew textureInfo = info.Textures[textureGUID];
             string filePath = Path.Combine(path, $"{textureInfo.GetNameIndex()}");
+            if (teResourceGUID.Type(textureGUID) != 0x4) filePath += $".{teResourceGUID.Type(textureGUID):X3}";
 
             if (Program.Flags.Deduplicate) {
                 if(ScratchDBInstance.HasRecord(textureGUID)) {
@@ -572,7 +605,7 @@ namespace DataTool.SaveLogic {
 
                     if (!texture.PayloadRequired) return;
                     for (int i = 0; i < texture.Payloads.Length; ++i) {
-                        using (Stream texturePayloadStream = OpenFile(texture.GetPayloadGUID(textureGUID, 1, i)))
+                        using (Stream texturePayloadStream = OpenFile(texture.GetPayloadGUID(textureGUID, i)))
                             WriteFile(texturePayloadStream, $"{filePath}_{i}.04D");
                     }
                 }
@@ -585,17 +618,18 @@ namespace DataTool.SaveLogic {
                     // for diffing when they add/regen loads of cubemaps
                     
                     if (texture.PayloadRequired) {
-                        for (int i = 0; i < Math.Min(maxMips, texture.Payloads.Length); ++i) {
-                            texture.LoadPayload(OpenFile(texture.GetPayloadGUID(textureGUID, 1, i)), i);
+                        for (int i = 0; i < texture.Payloads.Length; ++i) {
+                            texture.LoadPayload(OpenFile(texture.GetPayloadGUID(textureGUID, i)), i);
+                            if (maxMips == 1) break;
                         }
                     }
 
-                    uint width = texture.Header.Width;
-                    uint height = texture.Header.Height;
-                    uint surfaces = texture.Header.Surfaces;
-                    if (texture.Header.IsCubemap || texture.Header.IsMultiSurface || texture.HasMultipleSurfaces)
+                    uint? width = null;
+                    uint? height = null;
+                    uint? surfaces = null;
+                    if (texture.Header.IsCubemap || texture.Header.IsArray || texture.HasMultipleSurfaces)
                     {
-                        if (flattenMultiSurface)
+                        if (createMultiSurfaceSheet)
                         {
                             TankLib.Helpers.Logger.Debug("Combo", $"Saving {Path.GetFileName(filePath)} as a sheet because it has more than one surface");
                             height = (uint)(texture.Header.Height * texture.Header.Surfaces);
@@ -604,14 +638,12 @@ namespace DataTool.SaveLogic {
                         }
                         else
                         {
-                            TankLib.Helpers.Logger.Debug("Combo", $"Saving {Path.GetFileName(filePath)} as {multiSurfaceTarget} because it has more than one surface");
-                            convertType = multiSurfaceTarget;
+                            TankLib.Helpers.Logger.Debug("Combo", $"Saving {Path.GetFileName(filePath)} as {multiSurfaceConvertType} because it has more than one surface");
+                            convertType = multiSurfaceConvertType;
                         }
                     }
 
-                    
-
-                    using (Stream convertedStream = texture.SaveToDDS(maxMips == 1 ? 1 : texture.Header.Mips, width, height, surfaces)) {
+                    using (Stream convertedStream = texture.SaveToDDS(maxMips == 1 ? 1 : texture.Header.MipCount, width, height, surfaces)) {
                         convertedStream.Position = 0;
                         if (convertType == "dds" || convertedStream.Length == 0) {
                             WriteFile(convertedStream, $"{filePath}.dds");
@@ -620,8 +652,7 @@ namespace DataTool.SaveLogic {
                         
                         bool isBcffValid = teTexture.DXGI_BC4.Contains(texture.Header.Format) || 
                                            teTexture.DXGI_BC5.Contains(texture.Header.Format) ||
-                                           new[] {TextureTypes.TextureType.ATI1, 
-                                               TextureTypes.TextureType.ATI2}.Contains(texture.Header.GetTextureType());
+                                           teTexture.ATI2.Contains(texture.Header.GetTextureType());
                         
                         ImageFormat imageFormat = null;
                         if (convertType == "tif") imageFormat = ImageFormat.Tiff;
@@ -631,7 +662,7 @@ namespace DataTool.SaveLogic {
                         // so there is no TGA image format.
                         // guess the TGA users are stuck with the DirectXTex stuff for now.
 
-                        if (isBcffValid && imageFormat != null && !(texture.Header.IsCubemap || texture.Header.IsMultiSurface || texture.HasMultipleSurfaces)) {
+                        if (isBcffValid && imageFormat != null && !(texture.Header.IsCubemap || texture.Header.IsArray || texture.HasMultipleSurfaces)) {
                             BlockDecompressor decompressor = new BlockDecompressor(convertedStream);
                             decompressor.CreateImage();
                             decompressor.Image.Save($"{filePath}.{convertType}", imageFormat);
@@ -662,9 +693,9 @@ namespace DataTool.SaveLogic {
                         pProcess.WaitForExit();
                         // when texconv writes with to the console -nologo is has done/failed conversion
                         string line = pProcess.StandardOutput.ReadToEnd();
-                        if (line?.Contains("FAILED") == true) {
+                        if (line.Contains("FAILED")) {
                             convertedStream.Position = 0;
-                            TankLib.Helpers.Logger.Debug("Combo", $"Saving {Path.GetFileName(filePath)} as dds because it failed.");
+                            TankLib.Helpers.Logger.Debug("Combo", $"Saving {Path.GetFileName(filePath)} as dds because texconv failed.");
                             WriteFile(convertedStream, $"{filePath}.dds");
                         }
                     }
@@ -713,7 +744,7 @@ namespace DataTool.SaveLogic {
             if (soundFile == 0) return;
             bool convertWem = true;
             if (flags is ExtractFlags extractFlags) {
-                convertWem = extractFlags.ConvertSound && !extractFlags.Raw;
+                convertWem = !extractFlags.RawSound && !extractFlags.Raw;
                 if (extractFlags.SkipSound) return;
             }
             

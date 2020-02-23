@@ -23,10 +23,10 @@ namespace DataTool {
         [CLIFlag(Default = false, Flag = "graceful-exit", Help = "When enabled don't crash on invalid CMF Encryption", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool GracefulExit;
 
-        [CLIFlag(Default = true, Flag = "cache", Help = "Cache Index files from CDN", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBooleanInv" })]
+        [CLIFlag(Default = true, Flag = "cache", Help = "Cache Index files from CDN", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool UseCache;
 
-        [CLIFlag(Default = true, Flag = "cache-data", Help = "Cache Data files from CDN", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBooleanInv" })]
+        [CLIFlag(Default = true, Flag = "cache-data", Help = "Cache Data files from CDN", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         // ReSharper disable once InconsistentNaming
         public bool CacheCDNData;
 
@@ -75,6 +75,12 @@ namespace DataTool {
         [CLIFlag(Default = false, Flag = "args-delete", Help = "Delete saved program arguments", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         [Alias("argd")]
         public bool DeleteArgs;
+
+        [CLIFlag(Default = false, Flag = "no-names", Help = "Don't use names for textures", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool NoNames;
+
+        [CLIFlag(Default = false, Flag = "extract-shaders", Help = "Extract shader files", Hidden = true, Parser = new[] {"DataTool.Flag.Converter", "CLIFlagBoolean"})]
+        public bool ExtractShaders;
 
         public override bool Validate() => true;
     }

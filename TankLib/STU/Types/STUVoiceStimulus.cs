@@ -14,6 +14,9 @@ namespace TankLib.STU.Types {
         [STUFieldAttribute(0x2C54AEAF, "m_category")]
         public teStructuredDataAssetRef<STUVoiceCategory> m_category;
 
+        [STUFieldAttribute(0x91F599DF)]
+        public Enum_1964FED7[] m_91F599DF;
+
         [STUFieldAttribute(0x4FF98D41, "m_criteria", ReaderType = typeof(EmbeddedInstanceFieldReader))]
         public STUCriteriaContainer m_criteria;
 
@@ -44,6 +47,9 @@ namespace TankLib.STU.Types {
         [STUFieldAttribute(0xED61D926, "m_radius")]
         public float m_radius;
 
+        [STUFieldAttribute(0xBCE309D7)]
+        public Enum_523DC49D m_BCE309D7;
+
         [STUFieldAttribute(0x9502010D, "m_active")]
         public byte m_active;
 
@@ -51,7 +57,7 @@ namespace TankLib.STU.Types {
         public byte m_announcer;
 
         [STUFieldAttribute(0xAB866031)]
-        public byte m_AB866031;
+        public byte m_AB866031; // dunno what it is but doesnt seem to be related to hero voicelines at all, no hero stimuli have this set
 
         [STUFieldAttribute(0xAC80C14A)]
         public byte m_AC80C14A;
@@ -66,7 +72,7 @@ namespace TankLib.STU.Types {
         public byte m_72AA9E92;
 
         [STUFieldAttribute(0xAFCF2626)]
-        public byte m_AFCF2626;
+        public byte m_AFCF2626; // event npc callouts "the witch is here" / "assassin's over there"
 
         [STUFieldAttribute(0xD7FE39AA)]
         public byte m_D7FE39AA;
@@ -81,9 +87,6 @@ namespace TankLib.STU.Types {
         public byte m_252D7B29;
 
         [STUFieldAttribute(0x5D07FCC3)]
-        public byte m_5D07FCC3;
-
-        [STUFieldAttribute(0x1AD9EC4A)]
-        public byte m_1AD9EC4A;
+        public byte m_5D07FCC3; // post game card voting voicelines that play at 5 and 10 votes.
     }
 }

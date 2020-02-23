@@ -142,11 +142,11 @@ namespace DataTool.FindLogic {
             }
 
             public override string GetName() {
-                return GetValidFilename(Name) ?? GetFileName(GUID);
+                return GetValidFilename(Name, false) ?? GetFileName(GUID);
             }
 
             public override string GetNameIndex() {
-                return GetValidFilename(Name) ?? $"{GUID & 0xFFFFFFFFFFFF:X12}";
+                return GetValidFilename(Name, false) ?? $"{GUID & 0xFFFFFFFFFFFF:X12}";
             }
         }
 
@@ -248,7 +248,9 @@ namespace DataTool.FindLogic {
         public class MaterialInfo : ComboType {
             public ulong MaterialData;
             public ulong ShaderSource;
-            
+            public ulong ShaderGroup;
+            public List<(ulong instance, ulong code, byte[] shaderData)> Shaders;
+
             // shader info;
             // main shader = 44, used to be A5
             // golden = 50
@@ -603,11 +605,12 @@ namespace DataTool.FindLogic {
                     using (Stream animationStream = OpenFile(guid)) {
                         if (animationStream == null) break;
                         ulong effectGuid;
+                        // This is ass.
                         using (BinaryReader animationReader = new BinaryReader(animationStream)) {
                             uint priority = animationReader.ReadUInt16();
-                            animationStream.Position = 0xC;
+                            animationStream.Position = 0x18;
                             float fps = animationReader.ReadSingle();
-                            animationStream.Position = 0x10;
+                            animationStream.Position = 0x20;
                             effectGuid = animationReader.ReadUInt64();
                             animationInfo.FPS = fps;
                             animationInfo.Priority = priority;
@@ -650,6 +653,22 @@ namespace DataTool.FindLogic {
 
                     materialInfo.MaterialIDs.Add(context.MaterialID);
                     materialInfo.ShaderSource = GetReplacement(material.Header.ShaderSource, replacements);
+                    materialInfo.ShaderGroup = GetReplacement(material.Header.ShaderGroup, replacements);
+                    try {
+                        if (Program.Flags.ExtractShaders) {
+                            teShaderGroup shaderGroup = new teShaderGroup(OpenFile(materialInfo.ShaderGroup));
+                            materialInfo.Shaders = new List<(ulong instance, ulong code, byte[] shaderData)>();
+                            foreach (teResourceGUID shaderGuid in shaderGroup.Instances) {
+                                ulong shaderInstanceGuid = GetReplacement(shaderGuid, replacements);
+                                teShaderInstance shaderInstance = new teShaderInstance(OpenFile(shaderInstanceGuid));
+                                ulong shaderCodeGuid = GetReplacement(shaderInstance.Header.ShaderCode, replacements);
+                                teShaderCode shaderCode = new teShaderCode(OpenFile(shaderCodeGuid));
+                                materialInfo.Shaders.Add((shaderInstanceGuid, shaderCodeGuid, shaderCode.ByteCode));
+                            }
+                        }
+                    } catch {
+                        // lol xd
+                    }
 
                     if (context.ModelLook == 0 && context.Model != 0) {
                         info.Models[context.Model].LooseMaterials.Add(guid);
@@ -810,6 +829,7 @@ namespace DataTool.FindLogic {
                     break;
                 case 0x20:
                     STUAnimBlendTree blendTree = GetInstance<STUAnimBlendTree>(guid);
+                    if (blendTree == null || blendTree.m_animNodes == null) break;
                     foreach (STUAnimNode_Base animNode in blendTree.m_animNodes) {
                         if (animNode is STUAnimNode_Animation animNodeAnimation) {
                             Find(info, animNodeAnimation?.m_animation?.m_value, replacements, context);

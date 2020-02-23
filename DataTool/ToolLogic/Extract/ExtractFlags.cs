@@ -13,17 +13,17 @@ namespace DataTool.ToolLogic.Extract {
         [CLIFlag(Default = false, Flag = "convert-lossless-textures", Help = "Output lossless textures (if converted)", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool ConvertTexturesLossless;
         
-        [CLIFlag(Default = true, Flag = "convert-textures", Help = "Convert .004 files to {convert-textures-type}", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
-        public bool ConvertTextures;
+        [CLIFlag(Default = false, Flag = "raw-textures", Help = "Do not convert textures", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool RawTextures;
         
-        [CLIFlag(Default = true, Flag = "convert-sound", Help = "Convert .wem files to .ogg", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
-        public bool ConvertSound;
+        [CLIFlag(Default = false, Flag = "raw-sound", Help = "Do not convert sounds", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool RawSound;
         
-        [CLIFlag(Default = true, Flag = "convert-models", Help = "Convert .00C files to .owmdl", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
-        public bool ConvertModels;
+        [CLIFlag(Default = false, Flag = "raw-models", Help = "Do not convert models", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool RawModels;
         
-        [CLIFlag(Default = true, Flag = "convert-animations", Help = "Convert .006 files to .seanim", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
-        public bool ConvertAnimations;
+        [CLIFlag(Default = false, Flag = "raw-animations", Help = "Do not convert animations", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool RawAnimations;
         
         [CLIFlag(Default = false, Flag = "skip-textures", Help = "Skip texture extraction", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool SkipTextures;
@@ -58,12 +58,12 @@ namespace DataTool.ToolLogic.Extract {
         [CLIFlag(Default = false, Flag = "sheet-multisurface", Help = "Save multisurface textures as one large image, tiled across in the Y (vertical) direction", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool SheetMultiSurface;
 
-        [CLIFlag(Default = false, Flag = "flatten-multisurface", Help = "Convert multisurface textures to target type", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
-        public bool DestroyMultiSurface;
-
         [CLIFlag(Default = false, Flag = "extract-mips", Help = "Extract mip files", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         public bool SaveMips;
-
+        
+        [CLIFlag(Default = true, Flag = "subtitles-with-sounds", Help = "Extract subtitles alongside voicelines", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
+        public bool SubtitlesWithSounds;
+        
         // [CLIFlag(Default = false, Flag = "convert-bnk", Help = "Convert .bnk files to .wem", Parser = new[] { "DataTool.Flag.Converter", "CLIFlagBoolean" })]
         // public bool ConvertBnk;
 

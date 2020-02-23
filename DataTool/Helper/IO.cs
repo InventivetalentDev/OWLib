@@ -14,8 +14,10 @@ using static DataTool.Program;
 namespace DataTool.Helper {
     // ReSharper disable once InconsistentNaming
     public static class IO {
-        public static string GetValidFilename(string filename) {
+        public static string GetValidFilename(string filename, bool force=true) {
+            if (Flags.NoNames && !force) return null;
             if (filename == null) return null;
+
             string invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
             string invalidReStr = $@"[{invalidChars}]+";
 
@@ -25,7 +27,8 @@ namespace DataTool.Helper {
                 "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
             };
 
-            string sanitisedNamePart = Regex.Replace(filename, invalidReStr, "_");
+            var newFileName = filename.TrimEnd('.');
+            string sanitisedNamePart = Regex.Replace(newFileName, invalidReStr, "_");
 
             return reservedWords.Select(reservedWord => $"^{reservedWord}\\.").Aggregate(sanitisedNamePart,
                 (current, reservedWordPattern) => Regex.Replace(current, reservedWordPattern, "_reservedWord_.",
@@ -90,9 +93,27 @@ namespace DataTool.Helper {
             }
         }
 
+        public static void WriteFile(byte[] bytes, string filename) {
+            if (bytes == null) return;
+            string path = Path.GetDirectoryName(filename);
+            if (!Directory.Exists(path) && path != null) {
+                Directory.CreateDirectory(path);
+            }
+
+            using (Stream file = File.OpenWrite(filename)) {
+                file.SetLength(0); // ensure no leftover data
+                file.Write(bytes, 0, bytes.Length);
+            }
+        }
+
         public static void WriteFile(ulong guid, string path) {
             if (!TankHandler.Assets.ContainsKey(guid)) return;
             WriteFile(OpenFile(guid), guid, path);
+        }
+
+        public static void WriteFile(ulong guid, string path, string filename) {
+            if (!TankHandler.Assets.ContainsKey(guid)) return;
+            WriteFile(OpenFile(guid), Path.Combine(path, filename));
         }
 
         public static void WriteFile(Stream stream, ulong guid, string path) {
@@ -104,14 +125,6 @@ namespace DataTool.Helper {
             string filename = GetFileName(guid);
             
             WriteFile(stream, Path.Combine(path, filename));
-            
-            if (!Directory.Exists(path)) {
-                Directory.CreateDirectory(path);
-            }
-
-            using (Stream file = File.OpenWrite(Path.Combine(path, filename))) {
-                stream.CopyTo(file);
-            }
         }
         
         public static HashSet<ulong> MissingKeyLog = new HashSet<ulong>();

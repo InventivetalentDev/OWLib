@@ -65,7 +65,7 @@ namespace TankView.Helper {
 
                 teTexture texture = new teTexture(IOHelper.OpenFile(value));
                 if (texture.PayloadRequired) {
-                    ulong payload = texture.GetPayloadGUID(value.GUID, 1, 1);
+                    ulong payload = texture.GetPayloadGUID(value.GUID, 1);
                     if (IOHelper.HasFile(payload)) {
                         texture.LoadPayload(IOHelper.OpenFile(payload), 1);
                     } else {
@@ -97,10 +97,11 @@ namespace TankView.Helper {
         }
 
         private static object GetSubtitle(GUIDEntry value) {
-            teStructuredData stu = new teStructuredData(IOHelper.OpenFile(value));
-            STU_7A68A730 container = stu.GetInstance<STU_7A68A730>();
-            IEnumerable<string> strings = new[] {container.m_798027DE?.m_text?.Value, container.m_A84AA2B5?.m_text?.Value, container.m_D872E45C?.m_text?.Value, container.m_1485B834?.m_text?.Value}.Where(x => !string.IsNullOrEmpty(x));
-            return string.Join("\n", strings);
+            using (var stu = new teStructuredData(IOHelper.OpenFile(value))) {
+                STU_7A68A730 container = stu.GetInstance<STU_7A68A730>();
+                IEnumerable<string> strings = new[] {container.m_798027DE?.m_text?.Value, container.m_A84AA2B5?.m_text?.Value, container.m_D872E45C?.m_text?.Value, container.m_1485B834?.m_text?.Value}.Where(x => !string.IsNullOrEmpty(x));
+                return string.Join("\n", strings);
+            }
         }
     }
 }
