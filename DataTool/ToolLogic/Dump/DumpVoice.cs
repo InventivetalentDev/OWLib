@@ -119,10 +119,13 @@ namespace DataTool.ToolLogic.Dump {
                     foreach (Unlock itemInfo in progression.OtherUnlocks)
                         ProcessUnlock(heroNameActual, itemInfo, hero, baseComponent, baseInfo);
 
-                    foreach (var defaultUnlocks in progression.LevelUnlocks)
+                    foreach (var defaultUnlocks in progression.LevelUnlocks) {
+                        if (defaultUnlocks?.Unlocks == null) continue;
+
                         foreach (Unlock unlock in defaultUnlocks.Unlocks)
                             ProcessUnlock(heroNameActual, unlock, hero, baseComponent, baseInfo);
-
+                    }
+                    
                     foreach (var eventUnlocks in progression.LootBoxesUnlocks) {
                         if (eventUnlocks?.Unlocks == null) continue;
 
